@@ -163,6 +163,16 @@
   st.modal = 'viewReport';
   render();
 }
+    function editIndoc(empId, indocId, oldDate) {
+  const newDate = prompt('Enter new completion date (YYYY-MM-DD):', oldDate);
+  if (!newDate) return;
+  const emp = st.emps.find(e => e.id === empId);
+  const indoc = emp.indoctrinations.find(i => i.id === indocId);
+  const t = INDOCS.find(x => x.id === indoc.indoc_type_id);
+  const ex = new Date(newDate);
+  ex.setDate(ex.getDate() + t.validityDays);
+  sb.from('indoctrinations').update({ completion_date: newDate, expiry_date: ex.toISOString().split('T')[0] }).eq('id', indocId).then(() => loadData());
+}
     function render() {
       const stats = getStats();
       const filt = st.emps.filter(e => {
@@ -183,7 +193,7 @@
       const s = getSt(ind.expiry_date);
       const cfg = { expired: { bg: 'bg-red-100', tx: 'text-red-800', br: 'border-red-300' }, critical: { bg: 'bg-orange-100', tx: 'text-orange-800', br: 'border-orange-300' }, warning: { bg: 'bg-yellow-100', tx: 'text-yellow-800', br: 'border-yellow-300' }, valid: { bg: 'bg-green-100', tx: 'text-green-800', br: 'border-green-300' } }[s.s];
       const dc = ind.documents ? ind.documents.length : 0;
-      return `<div class="p-4 rounded border ${cfg.br} ${cfg.bg}"><div class="flex justify-between items-start mb-2"><div class="flex-1"><div class="font-semibold">${t?.name || 'Unknown'}</div><div class="text-xs text-gray-600">${t?.client || ''}</div></div><div class="flex gap-1"><label class="cursor-pointer p-1 hover:bg-white rounded"><input type="file" multiple accept="image/*,.pdf" class="hidden" onChange="handleUp(event, '${ind.id}')"><span>📤</span></label>${dc > 0 ? `<button onClick="st.modal = 'viewDocs'; st.data = {ind: ${JSON.stringify(ind).replace(/"/g, '&quot;')}, type: ${JSON.stringify(t).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded">👁️</button>` : ''}<button onClick="delInd('${ind.id}')" class="p-1 hover:bg-white rounded">🗑️</button></div></div><div class="text-sm space-y-1"><div>Completed: ${new Date(ind.completion_date).toLocaleDateString()}</div><div class="font-bold ${cfg.tx}">Expires: ${new Date(ind.expiry_date).toLocaleDateString()}</div><div class="text-xs font-semibold ${cfg.tx}">${s.d < 0 ? `EXPIRED ${Math.abs(s.d)} days ago` : `${s.d} days remaining`}</div><div class="text-xs mt-2">${dc > 0 ? `<span class="text-green-700 font-semibold">📄 ${dc} doc${dc > 1 ? 's' : ''}</span>` : '<span class="text-gray-500 italic">No docs</span>'}</div></div></div>`;
+      return `<div class="p-4 rounded border ${cfg.br} ${cfg.bg}"><div class="flex justify-between items-start mb-2"><div class="flex-1"><div class="font-semibold">${t?.name || 'Unknown'}</div><div class="text-xs text-gray-600">${t?.client || ''}</div></div><div class="flex gap-1"><label class="cursor-pointer p-1 hover:bg-white rounded"><input type="file" multiple accept="image/*,.pdf" class="hidden" onChange="handleUp(event, '${ind.id}')"><span>📤</span></label>${dc > 0 ? `<button onClick="st.modal = 'viewDocs'; st.data = {ind: ${JSON.stringify(ind).replace(/"/g, '&quot;')}, type: ${JSON.stringify(t).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded">👁️</button>` : ''}<button onClick="editIndoc(\'' + empId + '\', \'' + indoc.id + '\', \'' + indoc.completion_date + '\')" class="p-1 hover:bg-white rounded">✏️</button><button onClick="delInd('${ind.id}')" class="p-1 hover:bg-white rounded">🗑️</button></div></div><div class="text-sm space-y-1"><div>Completed: ${new Date(ind.completion_date).toLocaleDateString()}</div><div class="font-bold ${cfg.tx}">Expires: ${new Date(ind.expiry_date).toLocaleDateString()}</div><div class="text-xs font-semibold ${cfg.tx}">${s.d < 0 ? `EXPIRED ${Math.abs(s.d)} days ago` : `${s.d} days remaining`}</div><div class="text-xs mt-2">${dc > 0 ? `<span class="text-green-700 font-semibold">📄 ${dc} doc${dc > 1 ? 's' : ''}</span>` : '<span class="text-gray-500 italic">No docs</span>'}</div></div></div>`;
     }
     function renderMod() {
       if (!st.modal) return '';
