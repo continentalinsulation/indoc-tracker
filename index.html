@@ -6,6 +6,7 @@
   <title>Continental Insulation - Indoctrination Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-gray-50">
   <div id="app"></div>
@@ -184,6 +185,25 @@
   st.modal = null;
   render();
 }
+
+    async function handleEditIndoc() {
+  const newTid = document.getElementById('editTid').value;
+  const newCd = document.getElementById('editCd').value;
+  const newValidDays = document.getElementById('editValidDays').value;
+  if (!newTid || !newCd) { alert('All fields required'); return; }
+  const t = INDOCS.find(x => x.id === newTid);
+  const validDays = newValidDays ? parseInt(newValidDays) : t.validityDays;
+  const ex = new Date(newCd);
+  ex.setDate(ex.getDate() + validDays);
+  await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
+  await loadData();
+  st.modal = null;
+  render();
+}   // <-- This is line 178, the end of handleEditIndoc
+
+async function exportEmployeePackage() {   // <-- Start pasting here (new line after 178)
+  // ... rest of the export function
+}
     function render() {
       const stats = getStats();
       const filt = st.emps.filter(e => {
@@ -192,7 +212,7 @@
         if (st.filter === 'all') return true;
         return getEmpSt(e) === st.filter;
       });
-      document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200"><div class="text-3xl font-bold text-red-600">${stats.expired}</div><div class="text-sm text-red-700">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">🔔 Generate Alert Report</button><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
+      document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200"><div class="text-3xl font-bold text-red-600">${stats.expired}</div><div class="text-sm text-red-700">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">🔔 Generate Alert Report</button><button onClick="exportEmployeePackage()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📦 Export Training Records</button><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
     }
     function renderEmp(e) {
       const s = getEmpSt(e);
