@@ -265,7 +265,7 @@ async function exportEmployeePackage() {
     }
     function renderInd(eid, ind) {
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-      if (!t) return '<div class="p-4 rounded border border-gray-300 bg-gray-100"><div class="text-red-600">Error: Invalid indoctrination type</div></div>';
+     if (!t) return '<div class="p-4 rounded border border-gray-300 bg-gray-100"><div class="flex justify-between items-center"><div class="text-red-600">Error: Invalid indoctrination type</div><button onClick="delInd(\'' + ind.id + '\')" class="p-2 hover:bg-white rounded text-red-600">🗑️ Delete</button></div></div>';
       const s = getSt(ind.expiry_date);
       const cfg = { expired: { bg: 'bg-red-100', tx: 'text-red-800', br: 'border-red-300' }, critical: { bg: 'bg-orange-100', tx: 'text-orange-800', br: 'border-orange-300' }, warning: { bg: 'bg-yellow-100', tx: 'text-yellow-800', br: 'border-yellow-300' }, valid: { bg: 'bg-green-100', tx: 'text-green-800', br: 'border-green-300' } }[s.s];
       const dc = ind.documents ? ind.documents.length : 0;
