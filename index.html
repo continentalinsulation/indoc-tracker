@@ -14,7 +14,7 @@
     const SUPABASE_URL = 'https://shncudhuqspawrvbdrza.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNobmN1ZGh1cXNwYXdydmJkcnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDQzMDYsImV4cCI6MjA4MzMyMDMwNn0.G5vZeUcse5pHqZy4vUHSsmc0wfeh9KUWMQF87rAynTo';
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const FULL_INDOC_LIST = [
       { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
@@ -70,7 +70,7 @@
       { id: 'gen_firstaid', name: 'Standard First Aid', validityDays: 1095, client: 'General' }
     ];
 
-    let state = {
+    let appState = {
       employees: [],
       loading: true,
       searchTerm: '',
@@ -80,16 +80,16 @@
     };
 
     async function loadEmployees() {
-      const { data: employees, error: empError } = await supabase.from('employees').select('*').order('name');
+      const { data: employees, error: empError } = await supabaseClient.from('employees').select('*').order('name');
       if (empError) { console.error('Error:', empError); return; }
 
-      const { data: indocs, error: indocError } = await supabase.from('indoctrinations').select('*');
+      const { data: indocs, error: indocError } = await supabaseClient.from('indoctrinations').select('*');
       if (indocError) { console.error('Error:', indocError); return; }
 
-      const { data: docs, error: docError } = await supabase.from('documents').select('*');
+      const { data: docs, error: docError } = await supabaseClient.from('documents').select('*');
       if (docError) { console.error('Error:', docError); return; }
 
-      state.employees = employees.map(emp => ({
+      appState.employees = employees.map(emp => ({
         ...emp,
         indoctrinations: indocs.filter(i => i.employee_id === emp.id).map(indoc => ({
           ...indoc,
@@ -97,17 +97,17 @@
         }))
       }));
 
-      state.loading = false;
+      appState.loading = false;
       render();
     }
 
     async function addEmployee(name, employeeId, email, phone) {
-      const { error } = await supabase.from('employees').insert([{
+      const { error } = await supabaseClient.from('employees').insert([{
         id: Date.now().toString(), name, employee_id: employeeId, email, phone
       }]);
       if (error) { alert('Error: ' + error.message); return; }
       await loadEmployees();
-      state.showModal = null;
+      appState.showModal = null;
       render();
     }
 
@@ -116,24 +116,24 @@
       const expiry = new Date(completionDate);
       expiry.setDate(expiry.getDate() + indocType.validityDays);
 
-      const { error } = await supabase.from('indoctrinations').insert([{
+      const { error } = await supabaseClient.from('indoctrinations').insert([{
         id: Date.now().toString(), employee_id: employeeId, indoc_type_id: indocTypeId,
         completion_date: completionDate, expiry_date: expiry.toISOString().split('T')[0]
       }]);
       if (error) { alert('Error: ' + error.message); return; }
       await loadEmployees();
-      state.showModal = null;
+      appState.showModal = null;
       render();
     }
 
     async function deleteEmployee(id) {
       if (!confirm('Delete employee?')) return;
-      await supabase.from('employees').delete().eq('id', id);
+      await supabaseClient.from('employees').delete().eq('id', id);
       await loadEmployees();
     }
 
     async function deleteIndoctrination(id) {
-      await supabase.from('indoctrinations').delete().eq('id', id);
+      await supabaseClient.from('indoctrinations').delete().eq('id', id);
       await loadEmployees();
     }
 
@@ -141,7 +141,7 @@
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
-          await supabase.from('documents').insert([{
+          await supabaseClient.from('documents').insert([{
             id: Date.now().toString() + Math.random(),
             indoctrination_id: indocId, name: file.name, type: file.type, data: e.target.result
           }]);
@@ -154,7 +154,7 @@
 
     async function deleteDocument(id) {
       if (!confirm('Delete document?')) return;
-      await supabase.from('documents').delete().eq('id', id);
+      await supabaseClient.from('documents').delete().eq('id', id);
       await loadEmployees();
     }
 
@@ -179,22 +179,22 @@
 
     function getStats() {
       return {
-        total: state.employees.length,
-        expired: state.employees.filter(e => getEmployeeStatus(e) === 'expired').length,
-        critical: state.employees.filter(e => getEmployeeStatus(e) === 'critical').length,
-        warning: state.employees.filter(e => getEmployeeStatus(e) === 'warning').length,
-        valid: state.employees.filter(e => getEmployeeStatus(e) === 'valid').length
+        total: appState.employees.length,
+        expired: appState.employees.filter(e => getEmployeeStatus(e) === 'expired').length,
+        critical: appState.employees.filter(e => getEmployeeStatus(e) === 'critical').length,
+        warning: appState.employees.filter(e => getEmployeeStatus(e) === 'warning').length,
+        valid: appState.employees.filter(e => getEmployeeStatus(e) === 'valid').length
       };
     }
 
     function render() {
       const stats = getStats();
-      const filtered = state.employees.filter(emp => {
-        const match = emp.name.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
-                      emp.employee_id.toLowerCase().includes(state.searchTerm.toLowerCase());
+      const filtered = appState.employees.filter(emp => {
+        const match = emp.name.toLowerCase().includes(appState.searchTerm.toLowerCase()) ||
+                      emp.employee_id.toLowerCase().includes(appState.searchTerm.toLowerCase());
         if (!match) return false;
-        if (state.filterStatus === 'all') return true;
-        return getEmployeeStatus(emp) === state.filterStatus;
+        if (appState.filterStatus === 'all') return true;
+        return getEmployeeStatus(emp) === appState.filterStatus;
       });
 
       document.getElementById('app').innerHTML = `
@@ -232,21 +232,21 @@
             <div class="bg-white p-4 rounded-lg shadow mb-6">
               <div class="flex gap-4 flex-wrap items-center">
                 <input type="text" placeholder="Search employees..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg"
-                  value="${state.searchTerm}" onInput="state.searchTerm = this.value; render();" />
-                <select class="px-4 py-2 border rounded-lg" value="${state.filterStatus}"
-                  onChange="state.filterStatus = this.value; render();">
+                  value="${appState.searchTerm}" onInput="appState.searchTerm = this.value; render();" />
+                <select class="px-4 py-2 border rounded-lg" value="${appState.filterStatus}"
+                  onChange="appState.filterStatus = this.value; render();">
                   <option value="all">All Status</option>
                   <option value="expired">Expired</option>
                   <option value="critical">Critical</option>
                   <option value="warning">Warning</option>
                   <option value="valid">Valid</option>
                 </select>
-                <button onClick="state.showModal = 'addEmployee'; render();"
+                <button onClick="appState.showModal = 'addEmployee'; render();"
                   class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button>
               </div>
             </div>
 
-            ${state.loading ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}
+            ${appState.loading ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}
             <div class="space-y-4">${filtered.map(emp => renderEmployee(emp)).join('')}</div>
           </div>
         </div>
@@ -271,7 +271,7 @@
               <p class="text-sm text-gray-500">${emp.email} • ${emp.phone}</p>
             </div>
             <div class="flex gap-2">
-              <button onClick="state.showModal = 'addIndoc'; state.modalData = {employeeId: '${emp.id}'}; render();"
+              <button onClick="appState.showModal = 'addIndoc'; appState.modalData = {employeeId: '${emp.id}'}; render();"
                 class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">+ Add Indoc</button>
               <button onClick="deleteEmployee('${emp.id}')"
                 class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
@@ -310,7 +310,7 @@
                   onChange="handleFileUpload(event, '${indoc.id}')">
                 <span class="text-blue-600">📤</span>
               </label>
-              ${docCount > 0 ? `<button onClick="state.showModal = 'viewDocs'; state.modalData = {empId: '${empId}', indoc: ${JSON.stringify(indoc).replace(/"/g, '&quot;')}, indocType: ${JSON.stringify(type).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded text-green-600">👁️</button>` : ''}
+              ${docCount > 0 ? `<button onClick="appState.showModal = 'viewDocs'; appState.modalData = {empId: '${empId}', indoc: ${JSON.stringify(indoc).replace(/"/g, '&quot;')}, indocType: ${JSON.stringify(type).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded text-green-600">👁️</button>` : ''}
               <button onClick="deleteIndoctrination('${indoc.id}')" class="p-1 hover:bg-white rounded text-red-600">🗑️</button>
             </div>
           </div>
@@ -329,9 +329,9 @@
     }
 
     function renderModals() {
-      if (!state.showModal) return '';
+      if (!appState.showModal) return '';
 
-      if (state.showModal === 'addEmployee') {
+      if (appState.showModal === 'addEmployee') {
         return `
           <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-lg p-6 max-w-md w-full">
@@ -342,7 +342,7 @@
                 <input id="empEmail" type="email" placeholder="Email" class="w-full p-2 border rounded" />
                 <input id="empPhone" placeholder="Phone" class="w-full p-2 border rounded" />
                 <div class="flex gap-2">
-                  <button onClick="state.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
+                  <button onClick="appState.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
                   <button onClick="handleAddEmployee()" class="flex-1 py-2 bg-green-600 text-white rounded">Add</button>
                 </div>
               </div>
@@ -351,7 +351,7 @@
         `;
       }
 
-      if (state.showModal === 'addIndoc') {
+      if (appState.showModal === 'addIndoc') {
         return `
           <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-white rounded-lg p-6 max-w-md w-full">
@@ -363,7 +363,7 @@
                 </select>
                 <input id="completionDate" type="date" class="w-full p-2 border rounded" />
                 <div class="flex gap-2">
-                  <button onClick="state.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
+                  <button onClick="appState.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
                   <button onClick="handleAddIndoc()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button>
                 </div>
               </div>
@@ -372,9 +372,9 @@
         `;
       }
 
-      if (state.showModal === 'viewDocs') {
-        const indoc = state.modalData.indoc;
-        const type = state.modalData.indocType;
+      if (appState.showModal === 'viewDocs') {
+        const indoc = appState.modalData.indoc;
+        const type = appState.modalData.indocType;
         const docs = indoc.documents || [];
 
         return `
@@ -385,7 +385,7 @@
                   <h2 class="text-2xl font-bold">Training Documents</h2>
                   <p class="text-sm text-gray-600">${type.name}</p>
                 </div>
-                <button onClick="state.showModal = null; render();" class="text-2xl">&times;</button>
+                <button onClick="appState.showModal = null; render();" class="text-2xl">&times;</button>
               </div>
               <div class="space-y-4">
                 ${docs.map(doc => `
@@ -425,16 +425,7 @@
       const indocType = document.getElementById('indocType').value;
       const completionDate = document.getElementById('completionDate').value;
       if (!indocType || !completionDate) { alert('All fields required'); return; }
-      await addIndoctrination(state.modalData.employeeId, indocType, completionDate);
+      await addIndoctrination(appState.modalData.employeeId, indocType, completionDate);
     }
 
-    async function handleFileUpload(event, indocId) {
-      const files = event.target.files;
-      for (let file of files) await uploadDocument(indocId, file);
-      event.target.value = '';
-    }
-
-    loadEmployees();
-  </script>
-</body>
-</html>
+    async function handle
