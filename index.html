@@ -201,8 +201,52 @@
   render();
 }   // <-- This is line 178, the end of handleEditIndoc
 
-async function exportEmployeePackage() {   // <-- Start pasting here (new line after 178)
-  // ... rest of the export function
+async function exportEmployeePackage() {
+  if (!window.JSZip) { alert('Loading export library...'); return; }
+  const zip = new JSZip();
+  let report = 'CONTINENTAL INSULATION - EMPLOYEE TRAINING RECORDS\n';
+  report += 'Generated: ' + new Date().toLocaleString() + '\n';
+  report += '==============================================\n\n';
+  
+  for (const emp of st.emps) {
+    report += emp.name + ' (ID: ' + emp.employee_id + ')\n';
+    report += 'Email: ' + emp.email + ' | Phone: ' + emp.phone + '\n';
+    report += '---\n';
+    
+    if (emp.indoctrinations.length === 0) {
+      report += 'No indoctrinations recorded\n\n';
+      continue;
+    }
+    
+    const empFolder = zip.folder(emp.name.replace(/[^a-z0-9]/gi, '_'));
+    
+    emp.indoctrinations.forEach((ind, idx) => {
+      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
+      const s = getSt(ind.expiry_date);
+      report += (idx + 1) + '. ' + (t?.name || 'Unknown') + ' (' + (t?.client || '') + ')\n';
+      report += '   Completed: ' + new Date(ind.completion_date).toLocaleDateString() + '\n';
+      report += '   Expires: ' + new Date(ind.expiry_date).toLocaleDateString() + '\n';
+      report += '   Status: ' + (s.d < 0 ? 'EXPIRED' : s.d + ' days remaining') + '\n';
+      report += '   Documents: ' + (ind.documents?.length || 0) + '\n';
+      
+      if (ind.documents && ind.documents.length > 0) {
+        ind.documents.forEach((doc, docIdx) => {
+          const base64Data = doc.data.split(',')[1];
+          const ext = doc.name.split('.').pop() || (doc.type.includes('pdf') ? 'pdf' : 'jpg');
+          empFolder.file((idx + 1) + '_' + (t?.name || 'doc').replace(/[^a-z0-9]/gi, '_') + '_' + docIdx + '.' + ext, base64Data, {base64: true});
+        });
+      }
+    });
+    report += '\n';
+  }
+  
+  zip.file('Training_Report.txt', report);
+  const blob = await zip.generateAsync({type: 'blob'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Continental_Training_Records_' + new Date().toISOString().split('T')[0] + '.zip';
+  a.click();
 }
     function render() {
       const stats = getStats();
