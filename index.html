@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental Insulation - Indoctrination Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div id="app"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://shncudhuqspawrvbdrza.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNobmN1ZGh1cXNwYXdydmJkcnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDQzMDYsImV4cCI6MjA4MzMyMDMwNn0.G5vZeUcse5pHqZy4vUHSsmc0wfeh9KUWMQF87rAynTo';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const FULL_INDOC_LIST = [
+      { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t2_mines', name: 'Tier 2: Mines Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t2_surface', name: 'Tier 2: Surface Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_electrowinning', name: 'Tier 3: Electrowinning Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_coleman', name: 'Tier 3: Coleman Mine Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_creighton', name: 'Tier 3: Creighton Mine Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_ccmc', name: 'Tier 3: CCMC Mine Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_garson', name: 'Tier 3: Garson Mine Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_totten', name: 'Tier 3: Totten Mine Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_water', name: 'Tier 3: Water Plants Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_filter', name: 'Tier 3: Filter Plant Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_tailings', name: 'Tier 3: Central Tailings Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_clarabelle', name: 'Tier 3: Clarabelle Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_tipple', name: 'Tier 3: Tipple Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_smelter', name: 'Tier 3: Bulk Smelter Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_acid', name: 'Tier 3: Acid Plant Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_matte', name: 'Tier 3: Matte Pro Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_oxygen', name: 'Tier 3: Oxygen Plant Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_shops', name: 'Tier 3: Divisional Shops Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_transport', name: 'Tier 3: Transportation Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_stobie', name: 'Tier 3: Stobie Mine Surface Plant Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_ccnr', name: 'Tier 3: CCNR Refinery Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_warehouse', name: 'Tier 3: Warehouse Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_naoc', name: 'Tier 3: NAOC Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_napg', name: 'Tier 3: NAPG Surface Projects Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_transport_permit', name: 'Tier 3: Transportation Work Permit Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_training114', name: 'Tier 3: North Atlantic Training Center (114)', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_power', name: 'Tier 3: Power Plants and Dams Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_whmis', name: 'Tier 3: WHMIS Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_geoscience', name: 'Tier 3: Frood-Stobie Geoscience Facility', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_rad1', name: 'Tier 3: Level 1 Radiation Device Awareness', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_rad2', name: 'Tier 3: Level 2 Radiation Safety', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_slope', name: 'Tier 3: Slope Hazard Awareness', validityDays: 365, client: 'Vale' },
+      { id: 'vale_t3_jha', name: 'Tier 3: Job Hazard Analysis (JHA) Training', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car15', name: 'CAR(1-5): Vale Base Metals Awareness', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car06', name: 'CAR06: Confined Spaces', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car07', name: 'CAR07: Machine Guarding', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car08', name: 'CAR08: Ground Stability', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car09', name: 'CAR09: Explosives', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car10', name: 'CAR10: Working with Electricity', validityDays: 365, client: 'Vale' },
+      { id: 'vale_car11', name: 'CAR11: Molten Metal', validityDays: 365, client: 'Vale' },
+      { id: 'vale_zes_review', name: 'ZES Annual Review (ZES003R)', validityDays: 365, client: 'Vale' },
+      { id: 'vale_zes_tagger', name: 'ZES Tagger PT1 Prerequisite (ZES003A)', validityDays: 365, client: 'Vale' },
+      { id: 'vale_zes_energized', name: 'ZES Working on Energized Equipment (ZES003.5)', validityDays: 365, client: 'Vale' },
+      { id: 'vale_supp_rescuer', name: 'Self Contained Self Rescuer', validityDays: 365, client: 'Vale' },
+      { id: 'vale_supp_ems', name: 'Environmental Management System Awareness', validityDays: 365, client: 'Vale' },
+      { id: 'vale_supp_exploration', name: 'General Exploration Orientation', validityDays: 365, client: 'Vale' },
+      { id: 'vale_supp_lifevac', name: 'How to use the LifeVac Device', validityDays: 365, client: 'Vale' },
+      { id: 'glencore_site', name: 'Glencore Site Orientation', validityDays: 730, client: 'Glencore' },
+      { id: 'gen_whmis', name: 'WHMIS 2015', validityDays: 1095, client: 'General' },
+      { id: 'gen_firstaid', name: 'Standard First Aid', validityDays: 1095, client: 'General' }
+    ];
+
+    let state = {
+      employees: [],
+      loading: true,
+      searchTerm: '',
+      filterStatus: 'all',
+      showModal: null,
+      modalData: {}
+    };
+
+    async function loadEmployees() {
+      const { data: employees, error: empError } = await supabase.from('employees').select('*').order('name');
+      if (empError) { console.error('Error:', empError); return; }
+
+      const { data: indocs, error: indocError } = await supabase.from('indoctrinations').select('*');
+      if (indocError) { console.error('Error:', indocError); return; }
+
+      const { data: docs, error: docError } = await supabase.from('documents').select('*');
+      if (docError) { console.error('Error:', docError); return; }
+
+      state.employees = employees.map(emp => ({
+        ...emp,
+        indoctrinations: indocs.filter(i => i.employee_id === emp.id).map(indoc => ({
+          ...indoc,
+          documents: docs.filter(d => d.indoctrination_id === indoc.id)
+        }))
+      }));
+
+      state.loading = false;
+      render();
+    }
+
+    async function addEmployee(name, employeeId, email, phone) {
+      const { error } = await supabase.from('employees').insert([{
+        id: Date.now().toString(), name, employee_id: employeeId, email, phone
+      }]);
+      if (error) { alert('Error: ' + error.message); return; }
+      await loadEmployees();
+      state.showModal = null;
+      render();
+    }
+
+    async function addIndoctrination(employeeId, indocTypeId, completionDate) {
+      const indocType = FULL_INDOC_LIST.find(t => t.id === indocTypeId);
+      const expiry = new Date(completionDate);
+      expiry.setDate(expiry.getDate() + indocType.validityDays);
+
+      const { error } = await supabase.from('indoctrinations').insert([{
+        id: Date.now().toString(), employee_id: employeeId, indoc_type_id: indocTypeId,
+        completion_date: completionDate, expiry_date: expiry.toISOString().split('T')[0]
+      }]);
+      if (error) { alert('Error: ' + error.message); return; }
+      await loadEmployees();
+      state.showModal = null;
+      render();
+    }
+
+    async function deleteEmployee(id) {
+      if (!confirm('Delete employee?')) return;
+      await supabase.from('employees').delete().eq('id', id);
+      await loadEmployees();
+    }
+
+    async function deleteIndoctrination(id) {
+      await supabase.from('indoctrinations').delete().eq('id', id);
+      await loadEmployees();
+    }
+
+    async function uploadDocument(indocId, file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          await supabase.from('documents').insert([{
+            id: Date.now().toString() + Math.random(),
+            indoctrination_id: indocId, name: file.name, type: file.type, data: e.target.result
+          }]);
+          await loadEmployees();
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function deleteDocument(id) {
+      if (!confirm('Delete document?')) return;
+      await supabase.from('documents').delete().eq('id', id);
+      await loadEmployees();
+    }
+
+    function getStatus(expiryDate) {
+      const today = new Date();
+      const expiry = new Date(expiryDate);
+      const days = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
+      if (days < 0) return { status: 'expired', days };
+      if (days <= 30) return { status: 'critical', days };
+      if (days <= 90) return { status: 'warning', days };
+      return { status: 'valid', days };
+    }
+
+    function getEmployeeStatus(emp) {
+      if (!emp.indoctrinations.length) return 'none';
+      const statuses = emp.indoctrinations.map(i => getStatus(i.expiry_date).status);
+      if (statuses.includes('expired')) return 'expired';
+      if (statuses.includes('critical')) return 'critical';
+      if (statuses.includes('warning')) return 'warning';
+      return 'valid';
+    }
+
+    function getStats() {
+      return {
+        total: state.employees.length,
+        expired: state.employees.filter(e => getEmployeeStatus(e) === 'expired').length,
+        critical: state.employees.filter(e => getEmployeeStatus(e) === 'critical').length,
+        warning: state.employees.filter(e => getEmployeeStatus(e) === 'warning').length,
+        valid: state.employees.filter(e => getEmployeeStatus(e) === 'valid').length
+      };
+    }
+
+    function render() {
+      const stats = getStats();
+      const filtered = state.employees.filter(emp => {
+        const match = emp.name.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
+                      emp.employee_id.toLowerCase().includes(state.searchTerm.toLowerCase());
+        if (!match) return false;
+        if (state.filterStatus === 'all') return true;
+        return getEmployeeStatus(emp) === state.filterStatus;
+      });
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-screen p-6">
+          <div class="max-w-7xl mx-auto">
+            <div class="mb-8">
+              <h1 class="text-4xl font-bold text-gray-900 mb-2">Continental Insulation</h1>
+              <p class="text-xl text-gray-600">Indoctrination Tracking System</p>
+              <p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud-Hosted • Real-Time Sync • 51 Vale Indocs</p>
+            </div>
+
+            <div class="grid grid-cols-5 gap-4 mb-6">
+              <div class="bg-white p-6 rounded-lg shadow">
+                <div class="text-3xl font-bold">${stats.total}</div>
+                <div class="text-sm text-gray-600">Total Staff</div>
+              </div>
+              <div class="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200">
+                <div class="text-3xl font-bold text-red-600">${stats.expired}</div>
+                <div class="text-sm text-red-700">Expired</div>
+              </div>
+              <div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200">
+                <div class="text-3xl font-bold text-orange-600">${stats.critical}</div>
+                <div class="text-sm text-orange-700">≤30 Days</div>
+              </div>
+              <div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200">
+                <div class="text-3xl font-bold text-yellow-600">${stats.warning}</div>
+                <div class="text-sm text-yellow-700">≤90 Days</div>
+              </div>
+              <div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200">
+                <div class="text-3xl font-bold text-green-600">${stats.valid}</div>
+                <div class="text-sm text-green-700">Valid</div>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow mb-6">
+              <div class="flex gap-4 flex-wrap items-center">
+                <input type="text" placeholder="Search employees..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg"
+                  value="${state.searchTerm}" onInput="state.searchTerm = this.value; render();" />
+                <select class="px-4 py-2 border rounded-lg" value="${state.filterStatus}"
+                  onChange="state.filterStatus = this.value; render();">
+                  <option value="all">All Status</option>
+                  <option value="expired">Expired</option>
+                  <option value="critical">Critical</option>
+                  <option value="warning">Warning</option>
+                  <option value="valid">Valid</option>
+                </select>
+                <button onClick="state.showModal = 'addEmployee'; render();"
+                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button>
+              </div>
+            </div>
+
+            ${state.loading ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}
+            <div class="space-y-4">${filtered.map(emp => renderEmployee(emp)).join('')}</div>
+          </div>
+        </div>
+        ${renderModals()}
+      `;
+    }
+
+    function renderEmployee(emp) {
+      const status = getEmployeeStatus(emp);
+      const colors = {
+        expired: 'border-red-500 bg-red-50', critical: 'border-orange-500 bg-orange-50',
+        warning: 'border-yellow-500 bg-yellow-50', valid: 'border-green-500 bg-green-50',
+        none: 'border-gray-300 bg-white'
+      };
+
+      return `
+        <div class="border-l-4 ${colors[status]} bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h3 class="text-2xl font-bold text-gray-900">${emp.name}</h3>
+              <p class="text-gray-600">ID: ${emp.employee_id}</p>
+              <p class="text-sm text-gray-500">${emp.email} • ${emp.phone}</p>
+            </div>
+            <div class="flex gap-2">
+              <button onClick="state.showModal = 'addIndoc'; state.modalData = {employeeId: '${emp.id}'}; render();"
+                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">+ Add Indoc</button>
+              <button onClick="deleteEmployee('${emp.id}')"
+                class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+            </div>
+          </div>
+          ${emp.indoctrinations.length === 0 ? '<p class="text-gray-500 italic">No indoctrinations</p>' : `
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              ${emp.indoctrinations.map(indoc => renderIndoc(emp.id, indoc)).join('')}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderIndoc(empId, indoc) {
+      const type = FULL_INDOC_LIST.find(t => t.id === indoc.indoc_type_id);
+      const status = getStatus(indoc.expiry_date);
+      const cfg = {
+        expired: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
+        critical: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' },
+        warning: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
+        valid: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' }
+      }[status.status];
+      const docCount = indoc.documents ? indoc.documents.length : 0;
+
+      return `
+        <div class="p-4 rounded border ${cfg.border} ${cfg.bg}">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex-1">
+              <div class="font-semibold text-gray-900">${type?.name || 'Unknown'}</div>
+              <div class="text-xs text-gray-600">${type?.client || 'N/A'}</div>
+            </div>
+            <div class="flex gap-1">
+              <label class="cursor-pointer p-1 hover:bg-white rounded">
+                <input type="file" multiple accept="image/*,.pdf" class="hidden"
+                  onChange="handleFileUpload(event, '${indoc.id}')">
+                <span class="text-blue-600">📤</span>
+              </label>
+              ${docCount > 0 ? `<button onClick="state.showModal = 'viewDocs'; state.modalData = {empId: '${empId}', indoc: ${JSON.stringify(indoc).replace(/"/g, '&quot;')}, indocType: ${JSON.stringify(type).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded text-green-600">👁️</button>` : ''}
+              <button onClick="deleteIndoctrination('${indoc.id}')" class="p-1 hover:bg-white rounded text-red-600">🗑️</button>
+            </div>
+          </div>
+          <div class="text-sm space-y-1">
+            <div>Completed: ${new Date(indoc.completion_date).toLocaleDateString()}</div>
+            <div class="font-bold ${cfg.text}">Expires: ${new Date(indoc.expiry_date).toLocaleDateString()}</div>
+            <div class="text-xs font-semibold ${cfg.text}">
+              ${status.days < 0 ? `EXPIRED ${Math.abs(status.days)} days ago` : `${status.days} days remaining`}
+            </div>
+            <div class="text-xs mt-2">
+              ${docCount > 0 ? `<span class="text-green-700 font-semibold">📄 ${docCount} document${docCount > 1 ? 's' : ''}</span>` : '<span class="text-gray-500 italic">No documents</span>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderModals() {
+      if (!state.showModal) return '';
+
+      if (state.showModal === 'addEmployee') {
+        return `
+          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 class="text-2xl font-bold mb-4">Add Employee</h2>
+              <div class="space-y-4">
+                <input id="empName" placeholder="Full Name" class="w-full p-2 border rounded" />
+                <input id="empId" placeholder="Employee ID" class="w-full p-2 border rounded" />
+                <input id="empEmail" type="email" placeholder="Email" class="w-full p-2 border rounded" />
+                <input id="empPhone" placeholder="Phone" class="w-full p-2 border rounded" />
+                <div class="flex gap-2">
+                  <button onClick="state.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
+                  <button onClick="handleAddEmployee()" class="flex-1 py-2 bg-green-600 text-white rounded">Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.showModal === 'addIndoc') {
+        return `
+          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 class="text-2xl font-bold mb-4">Add Indoctrination</h2>
+              <div class="space-y-4">
+                <select id="indocType" class="w-full p-2 border rounded">
+                  <option value="">Select Indoctrination (${FULL_INDOC_LIST.length} available)</option>
+                  ${FULL_INDOC_LIST.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}
+                </select>
+                <input id="completionDate" type="date" class="w-full p-2 border rounded" />
+                <div class="flex gap-2">
+                  <button onClick="state.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
+                  <button onClick="handleAddIndoc()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (state.showModal === 'viewDocs') {
+        const indoc = state.modalData.indoc;
+        const type = state.modalData.indocType;
+        const docs = indoc.documents || [];
+
+        return `
+          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div class="bg-white rounded-lg p-6 max-w-4xl w-full my-8">
+              <div class="flex justify-between items-center mb-4">
+                <div>
+                  <h2 class="text-2xl font-bold">Training Documents</h2>
+                  <p class="text-sm text-gray-600">${type.name}</p>
+                </div>
+                <button onClick="state.showModal = null; render();" class="text-2xl">&times;</button>
+              </div>
+              <div class="space-y-4">
+                ${docs.map(doc => `
+                  <div class="border rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-2">
+                      <div>
+                        <div class="font-semibold">${doc.name}</div>
+                        <div class="text-xs text-gray-500">Uploaded: ${new Date(doc.upload_date).toLocaleDateString()}</div>
+                      </div>
+                      <div class="flex gap-2">
+                        <a href="${doc.data}" download="${doc.name}" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">Download</a>
+                        <button onClick="deleteDocument('${doc.id}')" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Delete</button>
+                      </div>
+                    </div>
+                    ${doc.type.startsWith('image/') ? `<img src="${doc.data}" class="max-w-full h-auto max-h-96 rounded border" />` : '<div class="bg-gray-100 p-4 rounded text-center"><p class="text-sm text-gray-600">PDF - Click download to view</p></div>'}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return '';
+    }
+
+    async function handleAddEmployee() {
+      const name = document.getElementById('empName').value;
+      const employeeId = document.getElementById('empId').value;
+      const email = document.getElementById('empEmail').value;
+      const phone = document.getElementById('empPhone').value;
+      if (!name || !employeeId || !email || !phone) { alert('All fields required'); return; }
+      await addEmployee(name, employeeId, email, phone);
+    }
+
+    async function handleAddIndoc() {
+      const indocType = document.getElementById('indocType').value;
+      const completionDate = document.getElementById('completionDate').value;
+      if (!indocType || !completionDate) { alert('All fields required'); return; }
+      await addIndoctrination(state.modalData.employeeId, indocType, completionDate);
+    }
+
+    async function handleFileUpload(event, indocId) {
+      const files = event.target.files;
+      for (let file of files) await uploadDocument(indocId, file);
+      event.target.value = '';
+    }
+
+    loadEmployees();
+  </script>
+</body>
+</html>
