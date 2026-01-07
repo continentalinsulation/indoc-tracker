@@ -9,14 +9,11 @@
 </head>
 <body class="bg-gray-50">
   <div id="app"></div>
-
   <script>
     const SUPABASE_URL = 'https://shncudhuqspawrvbdrza.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNobmN1ZGh1cXNwYXdydmJkcnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDQzMDYsImV4cCI6MjA4MzMyMDMwNn0.G5vZeUcse5pHqZy4vUHSsmc0wfeh9KUWMQF87rAynTo';
-    
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const FULL_INDOC_LIST = [
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const INDOCS = [
       { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
       { id: 'vale_t2_mines', name: 'Tier 2: Mines Orientation', validityDays: 365, client: 'Vale' },
       { id: 'vale_t2_surface', name: 'Tier 2: Surface Orientation', validityDays: 365, client: 'Vale' },
@@ -69,363 +66,133 @@
       { id: 'gen_whmis', name: 'WHMIS 2015', validityDays: 1095, client: 'General' },
       { id: 'gen_firstaid', name: 'Standard First Aid', validityDays: 1095, client: 'General' }
     ];
-
-    let appState = {
-      employees: [],
-      loading: true,
-      searchTerm: '',
-      filterStatus: 'all',
-      showModal: null,
-      modalData: {}
-    };
-
-    async function loadEmployees() {
-      const { data: employees, error: empError } = await supabaseClient.from('employees').select('*').order('name');
-      if (empError) { console.error('Error:', empError); return; }
-
-      const { data: indocs, error: indocError } = await supabaseClient.from('indoctrinations').select('*');
-      if (indocError) { console.error('Error:', indocError); return; }
-
-      const { data: docs, error: docError } = await supabaseClient.from('documents').select('*');
-      if (docError) { console.error('Error:', docError); return; }
-
-      appState.employees = employees.map(emp => ({
-        ...emp,
-        indoctrinations: indocs.filter(i => i.employee_id === emp.id).map(indoc => ({
-          ...indoc,
-          documents: docs.filter(d => d.indoctrination_id === indoc.id)
-        }))
-      }));
-
-      appState.loading = false;
+    let st = { emps: [], load: true, search: '', filter: 'all', modal: null, data: {} };
+    async function loadData() {
+      const e = await sb.from('employees').select('*').order('name');
+      const i = await sb.from('indoctrinations').select('*');
+      const d = await sb.from('documents').select('*');
+      st.emps = (e.data || []).map(emp => ({ ...emp, indoctrinations: (i.data || []).filter(x => x.employee_id === emp.id).map(ind => ({ ...ind, documents: (d.data || []).filter(doc => doc.indoctrination_id === ind.id) })) }));
+      st.load = false;
       render();
     }
-
-    async function addEmployee(name, employeeId, email, phone) {
-      const { error } = await supabaseClient.from('employees').insert([{
-        id: Date.now().toString(), name, employee_id: employeeId, email, phone
-      }]);
-      if (error) { alert('Error: ' + error.message); return; }
-      await loadEmployees();
-      appState.showModal = null;
+    async function addEmp(n, eid, em, ph) {
+      await sb.from('employees').insert([{ id: Date.now() + '', name: n, employee_id: eid, email: em, phone: ph }]);
+      await loadData();
+      st.modal = null;
       render();
     }
-
-    async function addIndoctrination(employeeId, indocTypeId, completionDate) {
-      const indocType = FULL_INDOC_LIST.find(t => t.id === indocTypeId);
-      const expiry = new Date(completionDate);
-      expiry.setDate(expiry.getDate() + indocType.validityDays);
-
-      const { error } = await supabaseClient.from('indoctrinations').insert([{
-        id: Date.now().toString(), employee_id: employeeId, indoc_type_id: indocTypeId,
-        completion_date: completionDate, expiry_date: expiry.toISOString().split('T')[0]
-      }]);
-      if (error) { alert('Error: ' + error.message); return; }
-      await loadEmployees();
-      appState.showModal = null;
+    async function addInd(eid, tid, cd) {
+      const t = INDOCS.find(x => x.id === tid);
+      const ex = new Date(cd);
+      ex.setDate(ex.getDate() + t.validityDays);
+      await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+      await loadData();
+      st.modal = null;
       render();
     }
-
-    async function deleteEmployee(id) {
-      if (!confirm('Delete employee?')) return;
-      await supabaseClient.from('employees').delete().eq('id', id);
-      await loadEmployees();
+    async function delEmp(id) {
+      if (!confirm('Delete?')) return;
+      await sb.from('employees').delete().eq('id', id);
+      await loadData();
     }
-
-    async function deleteIndoctrination(id) {
-      await supabaseClient.from('indoctrinations').delete().eq('id', id);
-      await loadEmployees();
+    async function delInd(id) {
+      await sb.from('indoctrinations').delete().eq('id', id);
+      await loadData();
     }
-
-    async function uploadDocument(indocId, file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          await supabaseClient.from('documents').insert([{
-            id: Date.now().toString() + Math.random(),
-            indoctrination_id: indocId, name: file.name, type: file.type, data: e.target.result
-          }]);
-          await loadEmployees();
-          resolve();
+    async function upDoc(iid, f) {
+      return new Promise(res => {
+        const r = new FileReader();
+        r.onload = async e => {
+          await sb.from('documents').insert([{ id: Date.now() + Math.random() + '', indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result }]);
+          await loadData();
+          res();
         };
-        reader.readAsDataURL(file);
+        r.readAsDataURL(f);
       });
     }
-
-    async function deleteDocument(id) {
-      if (!confirm('Delete document?')) return;
-      await supabaseClient.from('documents').delete().eq('id', id);
-      await loadEmployees();
+    async function delDoc(id) {
+      if (!confirm('Delete?')) return;
+      await sb.from('documents').delete().eq('id', id);
+      await loadData();
     }
-
-    function getStatus(expiryDate) {
-      const today = new Date();
-      const expiry = new Date(expiryDate);
-      const days = Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
-      if (days < 0) return { status: 'expired', days };
-      if (days <= 30) return { status: 'critical', days };
-      if (days <= 90) return { status: 'warning', days };
-      return { status: 'valid', days };
+    function getSt(ed) {
+      const t = new Date(), e = new Date(ed), d = Math.floor((e - t) / 86400000);
+      if (d < 0) return { s: 'expired', d };
+      if (d <= 30) return { s: 'critical', d };
+      if (d <= 90) return { s: 'warning', d };
+      return { s: 'valid', d };
     }
-
-    function getEmployeeStatus(emp) {
-      if (!emp.indoctrinations.length) return 'none';
-      const statuses = emp.indoctrinations.map(i => getStatus(i.expiry_date).status);
-      if (statuses.includes('expired')) return 'expired';
-      if (statuses.includes('critical')) return 'critical';
-      if (statuses.includes('warning')) return 'warning';
+    function getEmpSt(e) {
+      if (!e.indoctrinations.length) return 'none';
+      const ss = e.indoctrinations.map(i => getSt(i.expiry_date).s);
+      if (ss.includes('expired')) return 'expired';
+      if (ss.includes('critical')) return 'critical';
+      if (ss.includes('warning')) return 'warning';
       return 'valid';
     }
-
     function getStats() {
       return {
-        total: appState.employees.length,
-        expired: appState.employees.filter(e => getEmployeeStatus(e) === 'expired').length,
-        critical: appState.employees.filter(e => getEmployeeStatus(e) === 'critical').length,
-        warning: appState.employees.filter(e => getEmployeeStatus(e) === 'warning').length,
-        valid: appState.employees.filter(e => getEmployeeStatus(e) === 'valid').length
+        total: st.emps.length,
+        expired: st.emps.filter(e => getEmpSt(e) === 'expired').length,
+        critical: st.emps.filter(e => getEmpSt(e) === 'critical').length,
+        warning: st.emps.filter(e => getEmpSt(e) === 'warning').length,
+        valid: st.emps.filter(e => getEmpSt(e) === 'valid').length
       };
     }
-
     function render() {
       const stats = getStats();
-      const filtered = appState.employees.filter(emp => {
-        const match = emp.name.toLowerCase().includes(appState.searchTerm.toLowerCase()) ||
-                      emp.employee_id.toLowerCase().includes(appState.searchTerm.toLowerCase());
-        if (!match) return false;
-        if (appState.filterStatus === 'all') return true;
-        return getEmployeeStatus(emp) === appState.filterStatus;
+      const filt = st.emps.filter(e => {
+        const m = e.name.toLowerCase().includes(st.search.toLowerCase()) || e.employee_id.toLowerCase().includes(st.search.toLowerCase());
+        if (!m) return false;
+        if (st.filter === 'all') return true;
+        return getEmpSt(e) === st.filter;
       });
-
-      document.getElementById('app').innerHTML = `
-        <div class="min-h-screen p-6">
-          <div class="max-w-7xl mx-auto">
-            <div class="mb-8">
-              <h1 class="text-4xl font-bold text-gray-900 mb-2">Continental Insulation</h1>
-              <p class="text-xl text-gray-600">Indoctrination Tracking System</p>
-              <p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud-Hosted • Real-Time Sync • 51 Vale Indocs</p>
-            </div>
-
-            <div class="grid grid-cols-5 gap-4 mb-6">
-              <div class="bg-white p-6 rounded-lg shadow">
-                <div class="text-3xl font-bold">${stats.total}</div>
-                <div class="text-sm text-gray-600">Total Staff</div>
-              </div>
-              <div class="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200">
-                <div class="text-3xl font-bold text-red-600">${stats.expired}</div>
-                <div class="text-sm text-red-700">Expired</div>
-              </div>
-              <div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200">
-                <div class="text-3xl font-bold text-orange-600">${stats.critical}</div>
-                <div class="text-sm text-orange-700">≤30 Days</div>
-              </div>
-              <div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200">
-                <div class="text-3xl font-bold text-yellow-600">${stats.warning}</div>
-                <div class="text-sm text-yellow-700">≤90 Days</div>
-              </div>
-              <div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200">
-                <div class="text-3xl font-bold text-green-600">${stats.valid}</div>
-                <div class="text-sm text-green-700">Valid</div>
-              </div>
-            </div>
-
-            <div class="bg-white p-4 rounded-lg shadow mb-6">
-              <div class="flex gap-4 flex-wrap items-center">
-                <input type="text" placeholder="Search employees..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg"
-                  value="${appState.searchTerm}" onInput="appState.searchTerm = this.value; render();" />
-                <select class="px-4 py-2 border rounded-lg" value="${appState.filterStatus}"
-                  onChange="appState.filterStatus = this.value; render();">
-                  <option value="all">All Status</option>
-                  <option value="expired">Expired</option>
-                  <option value="critical">Critical</option>
-                  <option value="warning">Warning</option>
-                  <option value="valid">Valid</option>
-                </select>
-                <button onClick="appState.showModal = 'addEmployee'; render();"
-                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button>
-              </div>
-            </div>
-
-            ${appState.loading ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}
-            <div class="space-y-4">${filtered.map(emp => renderEmployee(emp)).join('')}</div>
-          </div>
-        </div>
-        ${renderModals()}
-      `;
+      document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200"><div class="text-3xl font-bold text-red-600">${stats.expired}</div><div class="text-sm text-red-700">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
     }
-
-    function renderEmployee(emp) {
-      const status = getEmployeeStatus(emp);
-      const colors = {
-        expired: 'border-red-500 bg-red-50', critical: 'border-orange-500 bg-orange-50',
-        warning: 'border-yellow-500 bg-yellow-50', valid: 'border-green-500 bg-green-50',
-        none: 'border-gray-300 bg-white'
-      };
-
-      return `
-        <div class="border-l-4 ${colors[status]} bg-white rounded-lg shadow p-6">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h3 class="text-2xl font-bold text-gray-900">${emp.name}</h3>
-              <p class="text-gray-600">ID: ${emp.employee_id}</p>
-              <p class="text-sm text-gray-500">${emp.email} • ${emp.phone}</p>
-            </div>
-            <div class="flex gap-2">
-              <button onClick="appState.showModal = 'addIndoc'; appState.modalData = {employeeId: '${emp.id}'}; render();"
-                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">+ Add Indoc</button>
-              <button onClick="deleteEmployee('${emp.id}')"
-                class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
-            </div>
-          </div>
-          ${emp.indoctrinations.length === 0 ? '<p class="text-gray-500 italic">No indoctrinations</p>' : `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              ${emp.indoctrinations.map(indoc => renderIndoc(emp.id, indoc)).join('')}
-            </div>
-          `}
-        </div>
-      `;
+    function renderEmp(e) {
+      const s = getEmpSt(e);
+      const c = { expired: 'border-red-500 bg-red-50', critical: 'border-orange-500 bg-orange-50', warning: 'border-yellow-500 bg-yellow-50', valid: 'border-green-500 bg-green-50', none: 'border-gray-300 bg-white' };
+      return `<div class="border-l-4 ${c[s]} bg-white rounded-lg shadow p-6"><div class="flex justify-between items-start mb-4"><div><h3 class="text-2xl font-bold">${e.name}</h3><p class="text-gray-600">ID: ${e.employee_id}</p><p class="text-sm text-gray-500">${e.email} • ${e.phone}</p></div><div class="flex gap-2"><button onClick="st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">+ Add Indoc</button><button onClick="delEmp('${e.id}')" class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button></div></div>${e.indoctrinations.length === 0 ? '<p class="text-gray-500 italic">No indoctrinations</p>' : `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">${e.indoctrinations.map(i => renderInd(e.id, i)).join('')}</div>`}</div>`;
     }
-
-    function renderIndoc(empId, indoc) {
-      const type = FULL_INDOC_LIST.find(t => t.id === indoc.indoc_type_id);
-      const status = getStatus(indoc.expiry_date);
-      const cfg = {
-        expired: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
-        critical: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' },
-        warning: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
-        valid: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' }
-      }[status.status];
-      const docCount = indoc.documents ? indoc.documents.length : 0;
-
-      return `
-        <div class="p-4 rounded border ${cfg.border} ${cfg.bg}">
-          <div class="flex justify-between items-start mb-2">
-            <div class="flex-1">
-              <div class="font-semibold text-gray-900">${type?.name || 'Unknown'}</div>
-              <div class="text-xs text-gray-600">${type?.client || 'N/A'}</div>
-            </div>
-            <div class="flex gap-1">
-              <label class="cursor-pointer p-1 hover:bg-white rounded">
-                <input type="file" multiple accept="image/*,.pdf" class="hidden"
-                  onChange="handleFileUpload(event, '${indoc.id}')">
-                <span class="text-blue-600">📤</span>
-              </label>
-              ${docCount > 0 ? `<button onClick="appState.showModal = 'viewDocs'; appState.modalData = {empId: '${empId}', indoc: ${JSON.stringify(indoc).replace(/"/g, '&quot;')}, indocType: ${JSON.stringify(type).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded text-green-600">👁️</button>` : ''}
-              <button onClick="deleteIndoctrination('${indoc.id}')" class="p-1 hover:bg-white rounded text-red-600">🗑️</button>
-            </div>
-          </div>
-          <div class="text-sm space-y-1">
-            <div>Completed: ${new Date(indoc.completion_date).toLocaleDateString()}</div>
-            <div class="font-bold ${cfg.text}">Expires: ${new Date(indoc.expiry_date).toLocaleDateString()}</div>
-            <div class="text-xs font-semibold ${cfg.text}">
-              ${status.days < 0 ? `EXPIRED ${Math.abs(status.days)} days ago` : `${status.days} days remaining`}
-            </div>
-            <div class="text-xs mt-2">
-              ${docCount > 0 ? `<span class="text-green-700 font-semibold">📄 ${docCount} document${docCount > 1 ? 's' : ''}</span>` : '<span class="text-gray-500 italic">No documents</span>'}
-            </div>
-          </div>
-        </div>
-      `;
+    function renderInd(eid, ind) {
+      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
+      const s = getSt(ind.expiry_date);
+      const cfg = { expired: { bg: 'bg-red-100', tx: 'text-red-800', br: 'border-red-300' }, critical: { bg: 'bg-orange-100', tx: 'text-orange-800', br: 'border-orange-300' }, warning: { bg: 'bg-yellow-100', tx: 'text-yellow-800', br: 'border-yellow-300' }, valid: { bg: 'bg-green-100', tx: 'text-green-800', br: 'border-green-300' } }[s.s];
+      const dc = ind.documents ? ind.documents.length : 0;
+      return `<div class="p-4 rounded border ${cfg.br} ${cfg.bg}"><div class="flex justify-between items-start mb-2"><div class="flex-1"><div class="font-semibold">${t?.name || 'Unknown'}</div><div class="text-xs text-gray-600">${t?.client || ''}</div></div><div class="flex gap-1"><label class="cursor-pointer p-1 hover:bg-white rounded"><input type="file" multiple accept="image/*,.pdf" class="hidden" onChange="handleUp(event, '${ind.id}')"><span>📤</span></label>${dc > 0 ? `<button onClick="st.modal = 'viewDocs'; st.data = {ind: ${JSON.stringify(ind).replace(/"/g, '&quot;')}, type: ${JSON.stringify(t).replace(/"/g, '&quot;')}}; render();" class="p-1 hover:bg-white rounded">👁️</button>` : ''}<button onClick="delInd('${ind.id}')" class="p-1 hover:bg-white rounded">🗑️</button></div></div><div class="text-sm space-y-1"><div>Completed: ${new Date(ind.completion_date).toLocaleDateString()}</div><div class="font-bold ${cfg.tx}">Expires: ${new Date(ind.expiry_date).toLocaleDateString()}</div><div class="text-xs font-semibold ${cfg.tx}">${s.d < 0 ? `EXPIRED ${Math.abs(s.d)} days ago` : `${s.d} days remaining`}</div><div class="text-xs mt-2">${dc > 0 ? `<span class="text-green-700 font-semibold">📄 ${dc} doc${dc > 1 ? 's' : ''}</span>` : '<span class="text-gray-500 italic">No docs</span>'}</div></div></div>`;
     }
-
-    function renderModals() {
-      if (!appState.showModal) return '';
-
-      if (appState.showModal === 'addEmployee') {
-        return `
-          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 class="text-2xl font-bold mb-4">Add Employee</h2>
-              <div class="space-y-4">
-                <input id="empName" placeholder="Full Name" class="w-full p-2 border rounded" />
-                <input id="empId" placeholder="Employee ID" class="w-full p-2 border rounded" />
-                <input id="empEmail" type="email" placeholder="Email" class="w-full p-2 border rounded" />
-                <input id="empPhone" placeholder="Phone" class="w-full p-2 border rounded" />
-                <div class="flex gap-2">
-                  <button onClick="appState.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
-                  <button onClick="handleAddEmployee()" class="flex-1 py-2 bg-green-600 text-white rounded">Add</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
+    function renderMod() {
+      if (!st.modal) return '';
+      if (st.modal === 'addEmp') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Employee</h2><div class="space-y-4"><input id="n" placeholder="Name" class="w-full p-2 border rounded" /><input id="eid" placeholder="Employee ID" class="w-full p-2 border rounded" /><input id="em" placeholder="Email" class="w-full p-2 border rounded" /><input id="ph" placeholder="Phone" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddEmp()" class="flex-1 py-2 bg-green-600 text-white rounded">Add</button></div></div></div></div>`;
+      if (st.modal === 'addInd') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Indoctrination</h2><div class="space-y-4"><select id="tid" class="w-full p-2 border rounded"><option value="">Select (${INDOCS.length} available)</option>${INDOCS.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}</select><input id="cd" type="date" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button></div></div></div></div>`;
+      if (st.modal === 'viewDocs') {
+        const ind = st.data.ind;
+        const t = st.data.type;
+        const ds = ind.documents || [];
+        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto"><div class="bg-white rounded-lg p-6 max-w-4xl w-full my-8"><div class="flex justify-between items-center mb-4"><div><h2 class="text-2xl font-bold">Documents</h2><p class="text-sm text-gray-600">${t.name}</p></div><button onClick="st.modal = null; render();" class="text-2xl">&times;</button></div><div class="space-y-4">${ds.map(d => `<div class="border rounded-lg p-4"><div class="flex justify-between items-start mb-2"><div><div class="font-semibold">${d.name}</div><div class="text-xs text-gray-500">Uploaded: ${new Date(d.upload_date).toLocaleDateString()}</div></div><div class="flex gap-2"><a href="${d.data}" download="${d.name}" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">Download</a><button onClick="delDoc('${d.id}')" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Delete</button></div></div>${d.type.startsWith('image/') ? `<img src="${d.data}" class="max-w-full h-auto max-h-96 rounded border" />` : '<div class="bg-gray-100 p-4 rounded text-center"><p class="text-sm">PDF - Download to view</p></div>'}</div>`).join('')}</div></div></div>`;
       }
-
-      if (appState.showModal === 'addIndoc') {
-        return `
-          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 class="text-2xl font-bold mb-4">Add Indoctrination</h2>
-              <div class="space-y-4">
-                <select id="indocType" class="w-full p-2 border rounded">
-                  <option value="">Select Indoctrination (${FULL_INDOC_LIST.length} available)</option>
-                  ${FULL_INDOC_LIST.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}
-                </select>
-                <input id="completionDate" type="date" class="w-full p-2 border rounded" />
-                <div class="flex gap-2">
-                  <button onClick="appState.showModal = null; render();" class="flex-1 py-2 border rounded">Cancel</button>
-                  <button onClick="handleAddIndoc()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      if (appState.showModal === 'viewDocs') {
-        const indoc = appState.modalData.indoc;
-        const type = appState.modalData.indocType;
-        const docs = indoc.documents || [];
-
-        return `
-          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div class="bg-white rounded-lg p-6 max-w-4xl w-full my-8">
-              <div class="flex justify-between items-center mb-4">
-                <div>
-                  <h2 class="text-2xl font-bold">Training Documents</h2>
-                  <p class="text-sm text-gray-600">${type.name}</p>
-                </div>
-                <button onClick="appState.showModal = null; render();" class="text-2xl">&times;</button>
-              </div>
-              <div class="space-y-4">
-                ${docs.map(doc => `
-                  <div class="border rounded-lg p-4">
-                    <div class="flex justify-between items-start mb-2">
-                      <div>
-                        <div class="font-semibold">${doc.name}</div>
-                        <div class="text-xs text-gray-500">Uploaded: ${new Date(doc.upload_date).toLocaleDateString()}</div>
-                      </div>
-                      <div class="flex gap-2">
-                        <a href="${doc.data}" download="${doc.name}" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">Download</a>
-                        <button onClick="deleteDocument('${doc.id}')" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Delete</button>
-                      </div>
-                    </div>
-                    ${doc.type.startsWith('image/') ? `<img src="${doc.data}" class="max-w-full h-auto max-h-96 rounded border" />` : '<div class="bg-gray-100 p-4 rounded text-center"><p class="text-sm text-gray-600">PDF - Click download to view</p></div>'}
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
       return '';
     }
-
-    async function handleAddEmployee() {
-      const name = document.getElementById('empName').value;
-      const employeeId = document.getElementById('empId').value;
-      const email = document.getElementById('empEmail').value;
-      const phone = document.getElementById('empPhone').value;
-      if (!name || !employeeId || !email || !phone) { alert('All fields required'); return; }
-      await addEmployee(name, employeeId, email, phone);
+    async function handleAddEmp() {
+      const n = document.getElementById('n').value;
+      const eid = document.getElementById('eid').value;
+      const em = document.getElementById('em').value;
+      const ph = document.getElementById('ph').value;
+      if (!n || !eid || !em || !ph) { alert('All fields required'); return; }
+      await addEmp(n, eid, em, ph);
     }
-
-    async function handleAddIndoc() {
-      const indocType = document.getElementById('indocType').value;
-      const completionDate = document.getElementById('completionDate').value;
-      if (!indocType || !completionDate) { alert('All fields required'); return; }
-      await addIndoctrination(appState.modalData.employeeId, indocType, completionDate);
+    async function handleAddInd() {
+      const tid = document.getElementById('tid').value;
+      const cd = document.getElementById('cd').value;
+      if (!tid || !cd) { alert('All fields required'); return; }
+      await addInd(st.data.eid, tid, cd);
     }
-
-    async function handle
+    async function handleUp(e, iid) {
+      const fs = e.target.files;
+      for (let f of fs) await upDoc(iid, f);
+      e.target.value = '';
+    }
+    loadData();
+  </script>
+</body>
+</html>
