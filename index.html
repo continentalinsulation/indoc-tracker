@@ -198,7 +198,7 @@
     function renderMod() {
       if (!st.modal) return '';
       if (st.modal === 'addEmp') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Employee</h2><div class="space-y-4"><input id="n" placeholder="Name" class="w-full p-2 border rounded" /><input id="eid" placeholder="Employee ID" class="w-full p-2 border rounded" /><input id="em" placeholder="Email" class="w-full p-2 border rounded" /><input id="ph" placeholder="Phone" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddEmp()" class="flex-1 py-2 bg-green-600 text-white rounded">Add</button></div></div></div></div>`;
-      if (st.modal === 'addInd') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Indoctrination</h2><div class="space-y-4"><select id="tid" class="w-full p-2 border rounded"><option value="">Select (${INDOCS.length} available)</option>${INDOCS.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}</select><input id="cd" type="date" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button></div></div></div></div>`;
+      if (st.modal === 'addInd') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Indoctrination</h2><div class="space-y-4"><select id="tid" class="w-full p-2 border rounded" onChange="document.getElementById('customIndoc').style.display = this.value === 'custom' ? 'block' : 'none';"><option value="">Select (${INDOCS.length} available)</option>${INDOCS.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}<option value="custom">Custom/Other Indoctrination</option></select><div id="customIndoc" style="display:none;" class="space-y-2"><input id="customName" placeholder="Indoctrination Name" class="w-full p-2 border rounded" /><input id="customClient" placeholder="Client/Category" class="w-full p-2 border rounded" /><input id="customDays" type="number" placeholder="Valid for (days)" class="w-full p-2 border rounded" /></div><input id="cd" type="date" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button></div></div></div></div>`;
       if (st.modal === 'viewDocs') {
         const ind = st.data.ind;
         const t = st.data.type;
@@ -219,11 +219,27 @@ return '';
       await addEmp(n, eid, em, ph);
     }
     async function handleAddInd() {
-      const tid = document.getElementById('tid').value;
-      const cd = document.getElementById('cd').value;
-      if (!tid || !cd) { alert('All fields required'); return; }
-      await addInd(st.data.eid, tid, cd);
-    }
+  const tid = document.getElementById('tid').value;
+  const cd = document.getElementById('cd').value;
+  if (!tid || !cd) { alert('All fields required'); return; }
+  if (tid === 'custom') {
+    const cName = document.getElementById('customName').value;
+    const cClient = document.getElementById('customClient').value;
+    const cDays = document.getElementById('customDays').value;
+    if (!cName || !cClient || !cDays) { alert('Fill in all custom fields'); return; }
+    const customIndoc = { id: 'custom_' + Date.now(), name: cName, client: cClient, validityDays: parseInt(cDays) };
+    const ex = new Date(cd);
+    ex.setDate(ex.getDate() + customIndoc.validityDays);
+    await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: customIndoc.id, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+    INDOCS.push(customIndoc);
+  } else {
+    await addInd(st.data.eid, tid, cd);
+  }
+  await loadData();
+  st.modal = null;
+  render();
+}
+Let me know when you've replaced it!To run code, enable code execution and file creation in Settings > Capabilities.Claude is AI and can make mistakes. Please double-check responses.
     async function handleUp(e, iid) {
       const fs = e.target.files;
       for (let f of fs) await upDoc(iid, f);
