@@ -209,7 +209,7 @@ async function exportEmployeePackage() {
   report += '==============================================\n\n';
   
   for (const emp of st.emps) {
-    report += emp.name + ' (ID: ' + emp.employee_id + ')\n';
+    report += (emp.name || 'Unknown') + ' (ID: ' + (emp.employee_id || emp.id) + ')\n';
     report += 'Email: ' + emp.email + ' | Phone: ' + emp.phone + '\n';
     report += '---\n';
     
@@ -218,7 +218,7 @@ async function exportEmployeePackage() {
       continue;
     }
     
-    const empFolder = zip.folder(emp.name.replace(/[^a-z0-9]/gi, '_'));
+    const empFolder = zip.folder((emp.name || 'Employee_' + emp.id).replace(/[^a-z0-9]/gi, '_'));
     
     emp.indoctrinations.forEach((ind, idx) => {
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
