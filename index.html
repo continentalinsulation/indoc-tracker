@@ -203,25 +203,83 @@
   render();
 }   // <-- This is line 178, the end of handleEditIndoc
 
+async function exportSingleEmployee(empId) {
+  const emp = st.emps.find(e => e.id === empId);
+  if (!emp) { alert('Employee not found'); return; }
+  if (!window.JSZip) { alert('Loading export library...'); return; }
+
+  const zip = new JSZip();
+  let report = 'CONTINENTAL INSULATION - TRAINING RECORDS\n';
+  report += '==============================================\n\n';
+  report += 'EMPLOYEE INFORMATION\n';
+  report += 'Name: ' + (emp.name || 'Unknown') + '\n';
+  report += 'Employee ID: ' + (emp.employee_id || emp.id) + '\n';
+  report += 'Email: ' + (emp.email || 'N/A') + '\n';
+  report += 'Phone: ' + (emp.phone || 'N/A') + '\n';
+  report += 'Export Date: ' + new Date().toLocaleString() + '\n';
+  report += '==============================================\n\n';
+
+  if (emp.indoctrinations.length === 0) {
+    report += 'No indoctrinations recorded\n';
+  } else {
+    report += 'INDOCTRINATIONS (' + emp.indoctrinations.length + ' total)\n\n';
+
+    emp.indoctrinations.forEach((ind, idx) => {
+      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
+      const s = getSt(ind.expiry_date);
+
+      report += (idx + 1) + '. ' + (t?.name || 'Unknown Indoctrination') + '\n';
+      report += '   Client/Category: ' + (t?.client || 'N/A') + '\n';
+      report += '   Completion Date: ' + new Date(ind.completion_date).toLocaleDateString() + '\n';
+      report += '   Expiry Date: ' + new Date(ind.expiry_date).toLocaleDateString() + '\n';
+      report += '   Status: ' + (s.d < 0 ? 'EXPIRED (' + Math.abs(s.d) + ' days ago)' : s.d + ' days remaining') + '\n';
+      report += '   Documents Attached: ' + (ind.documents?.length || 0) + '\n';
+
+      if (ind.documents && ind.documents.length > 0) {
+        const indocFolderName = (idx + 1) + '_' + (t?.name || 'Indoctrination').replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+        const indocFolder = zip.folder(indocFolderName);
+
+        ind.documents.forEach((doc, docIdx) => {
+          const base64Data = doc.data.split(',')[1];
+          const ext = doc.name.split('.').pop() || (doc.type.includes('pdf') ? 'pdf' : 'jpg');
+          const fileName = 'doc_' + (docIdx + 1) + '.' + ext;
+          indocFolder.file(fileName, base64Data, {base64: true});
+        });
+
+        report += '   Document Files: Located in folder "' + indocFolderName + '"\n';
+      }
+      report += '\n';
+    });
+  }
+
+  zip.file('Training_Report.txt', report);
+  const blob = await zip.generateAsync({type: 'blob'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (emp.name || 'Employee').replace(/[^a-z0-9]/gi, '_') + '_Training_Records_' + new Date().toISOString().split('T')[0] + '.zip';
+  a.click();
+}
+
 async function exportEmployeePackage() {
   if (!window.JSZip) { alert('Loading export library...'); return; }
   const zip = new JSZip();
   let report = 'CONTINENTAL INSULATION - EMPLOYEE TRAINING RECORDS\n';
   report += 'Generated: ' + new Date().toLocaleString() + '\n';
   report += '==============================================\n\n';
-  
+
   for (const emp of st.emps) {
     report += (emp.name || 'Unknown') + ' (ID: ' + (emp.employee_id || emp.id) + ')\n';
     report += 'Email: ' + emp.email + ' | Phone: ' + emp.phone + '\n';
     report += '---\n';
-    
+
     if (emp.indoctrinations.length === 0) {
       report += 'No indoctrinations recorded\n\n';
       continue;
     }
-    
+
     const empFolder = zip.folder((emp.name || 'Employee_' + emp.id).replace(/[^a-z0-9]/gi, '_'));
-    
+
     emp.indoctrinations.forEach((ind, idx) => {
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
       const s = getSt(ind.expiry_date);
@@ -230,7 +288,7 @@ async function exportEmployeePackage() {
       report += '   Expires: ' + new Date(ind.expiry_date).toLocaleDateString() + '\n';
       report += '   Status: ' + (s.d < 0 ? 'EXPIRED' : s.d + ' days remaining') + '\n';
       report += '   Documents: ' + (ind.documents?.length || 0) + '\n';
-      
+
       if (ind.documents && ind.documents.length > 0) {
         ind.documents.forEach((doc, docIdx) => {
           const base64Data = doc.data.split(',')[1];
@@ -241,7 +299,7 @@ async function exportEmployeePackage() {
     });
     report += '\n';
   }
-  
+
   zip.file('Training_Report.txt', report);
   const blob = await zip.generateAsync({type: 'blob'});
   const url = URL.createObjectURL(blob);
@@ -301,6 +359,7 @@ async function exportEmployeePackage() {
                   ${statusBadges.valid > 0 ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded font-semibold">🟢 ${statusBadges.valid}</span>` : ''}
                 ` : '<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded">No indocs</span>'}
               </div>
+              <button onClick="event.stopPropagation(); exportSingleEmployee('${e.id}')" class="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm">📦 Export</button>
               <button onClick="event.stopPropagation(); st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">+ Indoc</button>
               <button onClick="event.stopPropagation(); delEmp('${e.id}')" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Delete</button>
             </div>
