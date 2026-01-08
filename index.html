@@ -346,7 +346,7 @@ function toggleSelectAllEmps() {
         if (st.filter === 'all') return true;
         return getEmpSt(e) === st.filter;
       });
-      document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-200 p-6 rounded-lg shadow border-2 border-red-400"><div class="text-3xl font-bold text-red-900">${stats.expired}</div><div class="text-sm text-red-900">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">🔔 Generate Alert Report</button><button onClick="openExportModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📦 Export Training Records</button><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
+      document.getElementById('app').innerHTML = `<div class="min-h-screen p-3 sm:p-6"><div class="max-w-7xl mx-auto"><div class="mb-6 sm:mb-8"><h1 class="text-2xl sm:text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-lg sm:text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-xs sm:text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6"><div class="bg-white p-3 sm:p-6 rounded-lg shadow"><div class="text-xl sm:text-3xl font-bold">${stats.total}</div><div class="text-xs sm:text-sm text-gray-600">Total</div></div><div class="bg-red-200 p-3 sm:p-6 rounded-lg shadow border-2 border-red-400"><div class="text-xl sm:text-3xl font-bold text-red-900">${stats.expired}</div><div class="text-xs sm:text-sm text-red-900">Expired</div></div><div class="bg-orange-50 p-3 sm:p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-xl sm:text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-xs sm:text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-3 sm:p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-xl sm:text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-xs sm:text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-3 sm:p-6 rounded-lg shadow border-2 border-green-200"><div class="text-xl sm:text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-xs sm:text-sm text-green-700">Valid</div></div></div><div class="bg-white p-3 sm:p-4 rounded-lg shadow mb-4 sm:mb-6"><div class="flex flex-col sm:flex-row gap-2 sm:gap-4"><input type="text" placeholder="Search..." class="w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg text-sm sm:text-base" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-3 py-2 sm:px-4 sm:py-2 border rounded-lg text-sm sm:text-base" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-3 py-2 sm:px-4 sm:py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm sm:text-base whitespace-nowrap">🔔 Alert Report</button><button onClick="openExportModal()" class="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap">📦 Export</button><button onClick="st.modal = 'addEmp'; render();" class="px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-3 sm:space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
       setTimeout(() => {
         const searchInput = document.getElementById('indocSearchInput');
         if (searchInput) {
@@ -370,31 +370,35 @@ function toggleSelectAllEmps() {
         statusBadges[st.s]++;
       });
       return `<div class="border-l-4 ${c[s]} bg-white rounded-lg shadow">
-        <div class="p-4 cursor-pointer hover:bg-gray-50" onClick="toggleEmp('${e.id}')">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3 flex-1">
-              <span class="text-xl transition-transform ${isExpanded ? 'rotate-90' : ''}">▶</span>
-              <div>
-                <h3 class="text-lg font-bold">${e.name}</h3>
-                <p class="text-sm text-gray-600">ID: ${e.employee_id} • ${e.email} • ${e.phone}</p>
+        <div class="p-3 sm:p-4 cursor-pointer hover:bg-gray-50" onClick="toggleEmp('${e.id}')">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <div class="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <span class="text-base sm:text-xl transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}">▶</span>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-base sm:text-lg font-bold truncate">${e.name}</h3>
+                <p class="text-xs sm:text-sm text-gray-600 truncate">ID: ${e.employee_id}</p>
+                <p class="text-xs text-gray-500 truncate sm:hidden">${e.email}</p>
+                <p class="text-xs sm:text-sm text-gray-600 hidden sm:block">${e.email} • ${e.phone}</p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <div class="flex gap-1 text-xs">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div class="flex gap-1 text-xs flex-wrap">
                 ${indocCount > 0 ? `
-                  ${statusBadges.expired > 0 ? `<span class="px-2 py-1 bg-red-200 text-red-900 rounded font-semibold">🔴 ${statusBadges.expired}</span>` : ''}
-                  ${statusBadges.critical > 0 ? `<span class="px-2 py-1 bg-orange-100 text-orange-800 rounded font-semibold">🟠 ${statusBadges.critical}</span>` : ''}
-                  ${statusBadges.warning > 0 ? `<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-semibold">🟡 ${statusBadges.warning}</span>` : ''}
-                  ${statusBadges.valid > 0 ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded font-semibold">🟢 ${statusBadges.valid}</span>` : ''}
-                ` : '<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded">No indocs</span>'}
+                  ${statusBadges.expired > 0 ? `<span class="px-2 py-1 bg-red-200 text-red-900 rounded font-semibold text-xs">🔴 ${statusBadges.expired}</span>` : ''}
+                  ${statusBadges.critical > 0 ? `<span class="px-2 py-1 bg-orange-100 text-orange-800 rounded font-semibold text-xs">🟠 ${statusBadges.critical}</span>` : ''}
+                  ${statusBadges.warning > 0 ? `<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-semibold text-xs">🟡 ${statusBadges.warning}</span>` : ''}
+                  ${statusBadges.valid > 0 ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded font-semibold text-xs">🟢 ${statusBadges.valid}</span>` : ''}
+                ` : '<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">No indocs</span>'}
               </div>
-              <button onClick="event.stopPropagation(); exportSingleEmployee('${e.id}')" class="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm">📦 Export</button>
-              <button onClick="event.stopPropagation(); st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">+ Indoc</button>
-              <button onClick="event.stopPropagation(); delEmp('${e.id}')" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Delete</button>
+              <div class="flex gap-2">
+                <button onClick="event.stopPropagation(); exportSingleEmployee('${e.id}')" class="flex-1 sm:flex-none px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs sm:text-sm whitespace-nowrap">📦</button>
+                <button onClick="event.stopPropagation(); st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="flex-1 sm:flex-none px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs sm:text-sm whitespace-nowrap">+ Indoc</button>
+                <button onClick="event.stopPropagation(); delEmp('${e.id}')" class="flex-1 sm:flex-none px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-xs sm:text-sm">Delete</button>
+              </div>
             </div>
           </div>
         </div>
-        ${isExpanded ? `<div class="px-4 pb-4 border-t">${e.indoctrinations.length === 0 ? '<p class="text-gray-500 italic mt-4">No indoctrinations</p>' : `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mt-4">${e.indoctrinations.map(i => renderInd(e.id, i)).join('')}</div>`}</div>` : ''}
+        ${isExpanded ? `<div class="px-3 sm:px-4 pb-3 sm:pb-4 border-t">${e.indoctrinations.length === 0 ? '<p class="text-gray-500 italic mt-4">No indoctrinations</p>' : `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mt-3 sm:mt-4">${e.indoctrinations.map(i => renderInd(e.id, i)).join('')}</div>`}</div>` : ''}
       </div>`;
     }
     function renderInd(eid, ind) {
@@ -407,61 +411,61 @@ function toggleSelectAllEmps() {
     }
     function renderMod() {
       if (!st.modal) return '';
-      if (st.modal === 'addEmp') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Employee</h2><div class="space-y-4"><input id="n" placeholder="Name" class="w-full p-2 border rounded" /><input id="eid" placeholder="Employee ID" class="w-full p-2 border rounded" /><input id="em" placeholder="Email" class="w-full p-2 border rounded" /><input id="ph" placeholder="Phone" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddEmp()" class="flex-1 py-2 bg-green-600 text-white rounded">Add</button></div></div></div></div>`;
+      if (st.modal === 'addEmp') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full"><h2 class="text-xl sm:text-2xl font-bold mb-4">Add Employee</h2><div class="space-y-3 sm:space-y-4"><input id="n" placeholder="Name" class="w-full p-3 border rounded text-base" /><input id="eid" placeholder="Employee ID" class="w-full p-3 border rounded text-base" /><input id="em" placeholder="Email" class="w-full p-3 border rounded text-base" /><input id="ph" placeholder="Phone" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddEmp()" class="flex-1 py-3 bg-green-600 text-white rounded text-base">Add</button></div></div></div></div>`;
       if (st.modal === 'addInd') {
         const filteredIndocs = INDOCS.filter(t =>
           t.name.toLowerCase().includes(indocSearch.toLowerCase()) ||
           t.client.toLowerCase().includes(indocSearch.toLowerCase())
         );
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Add Indoctrination</h2><div class="space-y-4"><input id="indocSearchInput" type="text" placeholder="🔍 Search indoctrinations..." class="w-full p-2 border rounded" value="${indocSearch}" onInput="indocSearch = this.value; cursorPos = this.selectionStart; render();" autofocus /><div class="text-xs text-gray-600 -mt-2 mb-1">Showing ${filteredIndocs.length} of ${INDOCS.length} indoctrinations</div><select id="tid" size="8" class="w-full p-2 border rounded" style="height: 200px;" onChange="document.getElementById('customIndoc').style.display = this.value === 'custom' ? 'block' : 'none';">${filteredIndocs.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}<option value="custom">➕ Custom/Other Indoctrination</option></select><div id="customIndoc" style="display:none;" class="space-y-2"><input id="customName" placeholder="Indoctrination Name" class="w-full p-2 border rounded" /><input id="customClient" placeholder="Client/Category" class="w-full p-2 border rounded" /><input id="customDays" type="number" placeholder="Valid for (days)" class="w-full p-2 border rounded" /></div><input id="cd" type="date" class="w-full p-2 border rounded" /><input id="validDays" type="number" placeholder="Valid for (days) - default based on selection" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; indocSearch = ''; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-2 bg-blue-600 text-white rounded">Add</button></div></div></div></div>`;
+        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] flex flex-col"><h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Add Indoctrination</h2><div class="space-y-3 sm:space-y-4 overflow-y-auto flex-1"><input id="indocSearchInput" type="text" placeholder="🔍 Search indoctrinations..." class="w-full p-3 border rounded text-base" value="${indocSearch}" onInput="indocSearch = this.value; cursorPos = this.selectionStart; render();" autofocus /><div class="text-xs text-gray-600 -mt-2 mb-1">Showing ${filteredIndocs.length} of ${INDOCS.length} indoctrinations</div><select id="tid" size="6" class="w-full p-2 border rounded text-sm" style="height: 150px;" onChange="document.getElementById('customIndoc').style.display = this.value === 'custom' ? 'block' : 'none';">${filteredIndocs.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}<option value="custom">➕ Custom/Other Indoctrination</option></select><div id="customIndoc" style="display:none;" class="space-y-2"><input id="customName" placeholder="Indoctrination Name" class="w-full p-3 border rounded text-base" /><input id="customClient" placeholder="Client/Category" class="w-full p-3 border rounded text-base" /><input id="customDays" type="number" placeholder="Valid for (days)" class="w-full p-3 border rounded text-base" /></div><input id="cd" type="date" class="w-full p-3 border rounded text-base" /><input id="validDays" type="number" placeholder="Valid for (days) - optional" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; indocSearch = ''; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-3 bg-blue-600 text-white rounded text-base">Add</button></div></div></div></div>`;
       }
       if (st.modal === 'viewDocs') {
         const ind = st.data.ind;
         const t = st.data.type;
         const ds = ind.documents || [];
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto"><div class="bg-white rounded-lg p-6 max-w-4xl w-full my-8"><div class="flex justify-between items-center mb-4"><div><h2 class="text-2xl font-bold">Documents</h2><p class="text-sm text-gray-600">${t.name}</p></div><button onClick="st.modal = null; render();" class="text-2xl">&times;</button></div><div class="space-y-4">${ds.map(d => `<div class="border rounded-lg p-4"><div class="flex justify-between items-start mb-2"><div><div class="font-semibold">${d.name}</div><div class="text-xs text-gray-500">Uploaded: ${new Date(d.upload_date).toLocaleDateString()}</div></div><div class="flex gap-2"><a href="${d.data}" download="${d.name}" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">Download</a><button onClick="delDoc('${d.id}')" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Delete</button></div></div>${d.type.startsWith('image/') ? `<img src="${d.data}" class="max-w-full h-auto max-h-96 rounded border" />` : '<div class="bg-gray-100 p-4 rounded text-center"><p class="text-sm">PDF - Download to view</p></div>'}</div>`).join('')}</div></div></div>`;
+        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full my-4 sm:my-8"><div class="flex justify-between items-center mb-4"><div><h2 class="text-lg sm:text-2xl font-bold">Documents</h2><p class="text-xs sm:text-sm text-gray-600 truncate">${t.name}</p></div><button onClick="st.modal = null; render();" class="text-2xl ml-2 flex-shrink-0">&times;</button></div><div class="space-y-3 sm:space-y-4">${ds.map(d => `<div class="border rounded-lg p-3 sm:p-4"><div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"><div class="min-w-0"><div class="font-semibold text-sm sm:text-base truncate">${d.name}</div><div class="text-xs text-gray-500">Uploaded: ${new Date(d.upload_date).toLocaleDateString()}</div></div><div class="flex gap-2"><a href="${d.data}" download="${d.name}" class="px-3 py-2 bg-blue-500 text-white rounded text-sm whitespace-nowrap">Download</a><button onClick="delDoc('${d.id}')" class="px-3 py-2 bg-red-500 text-white rounded text-sm whitespace-nowrap">Delete</button></div></div>${d.type.startsWith('image/') ? `<img src="${d.data}" class="max-w-full h-auto max-h-96 rounded border" />` : '<div class="bg-gray-100 p-4 rounded text-center"><p class="text-sm">PDF - Download to view</p></div>'}</div>`).join('')}</div></div></div>`;
       }
       if (st.modal === 'editIndoc') {
   const ind = st.data.indoc;
   const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-  return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-md w-full"><h2 class="text-2xl font-bold mb-4">Edit Indoctrination</h2><div class="space-y-4"><select id="editTid" class="w-full p-2 border rounded"><option value="">Select Indoctrination</option>' + INDOCS.map(type => '<option value="' + type.id + '" ' + (type.id === ind.indoc_type_id ? 'selected' : '') + '>' + type.name + ' (' + type.client + ')</option>').join('') + '</select><input id="editCd" type="date" value="' + ind.completion_date + '" class="w-full p-2 border rounded" /><input id="editValidDays" type="number" placeholder="Valid for (days)" class="w-full p-2 border rounded" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-2 border rounded">Cancel</button><button onClick="handleEditIndoc()" class="flex-1 py-2 bg-blue-600 text-white rounded">Save</button></div></div></div></div>';
+  return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full"><h2 class="text-xl sm:text-2xl font-bold mb-4">Edit Indoctrination</h2><div class="space-y-3 sm:space-y-4"><select id="editTid" class="w-full p-3 border rounded text-base"><option value="">Select Indoctrination</option>' + INDOCS.map(type => '<option value="' + type.id + '" ' + (type.id === ind.indoc_type_id ? 'selected' : '') + '>' + type.name + ' (' + type.client + ')</option>').join('') + '</select><input id="editCd" type="date" value="' + ind.completion_date + '" class="w-full p-3 border rounded text-base" /><input id="editValidDays" type="number" placeholder="Valid for (days)" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleEditIndoc()" class="flex-1 py-3 bg-blue-600 text-white rounded text-base">Save</button></div></div></div></div>';
 }
      if (st.modal === 'viewReport') {
-  return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-96 overflow-y-auto"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">Alert Report</h2><button onClick="st.modal = null; render();" class="text-2xl">&times;</button></div><div class="mb-4"><button onClick="navigator.clipboard.writeText(st.report); alert(\'Copied!\');" class="px-4 py-2 bg-green-600 text-white rounded">Copy to Clipboard</button></div><pre class="bg-gray-50 p-4 rounded text-sm whitespace-pre-wrap">' + st.report + '</pre></div></div>';
+  return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-4"><h2 class="text-lg sm:text-2xl font-bold">Alert Report</h2><button onClick="st.modal = null; render();" class="text-2xl ml-2">&times;</button></div><div class="mb-4"><button onClick="navigator.clipboard.writeText(st.report); alert(\'Copied!\');" class="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded text-base">Copy to Clipboard</button></div><pre class="bg-gray-50 p-3 sm:p-4 rounded text-xs sm:text-sm whitespace-pre-wrap overflow-y-auto flex-1">' + st.report + '</pre></div></div>';
 }
       if (st.modal === 'exportSelect') {
         const selectedCount = Object.keys(selectedEmpsForExport).filter(id => selectedEmpsForExport[id]).length;
         const allSelected = st.emps.length > 0 && st.emps.every(e => selectedEmpsForExport[e.id]);
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-2xl font-bold">Select Employees to Export</h2>
-              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="text-2xl">&times;</button>
+        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div class="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-3 sm:mb-4">
+              <h2 class="text-lg sm:text-2xl font-bold">Select Employees</h2>
+              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="text-2xl ml-2">&times;</button>
             </div>
-            <div class="mb-4 flex justify-between items-center">
-              <div class="text-sm text-gray-600">${selectedCount} of ${st.emps.length} employees selected</div>
-              <button onClick="toggleSelectAllEmps()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm">
+            <div class="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <div class="text-xs sm:text-sm text-gray-600">${selectedCount} of ${st.emps.length} selected</div>
+              <button onClick="toggleSelectAllEmps()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm whitespace-nowrap">
                 ${allSelected ? 'Deselect All' : 'Select All'}
               </button>
             </div>
-            <div class="overflow-y-auto flex-1 border rounded p-4 space-y-2">
+            <div class="overflow-y-auto flex-1 border rounded p-2 sm:p-4 space-y-2">
               ${st.emps.map(e => {
                 const s = getEmpSt(e);
                 const statusColors = { expired: 'text-red-700', critical: 'text-orange-700', warning: 'text-yellow-700', valid: 'text-green-700', none: 'text-gray-500' };
                 const isChecked = selectedEmpsForExport[e.id] || false;
-                return `<label class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded cursor-pointer border ${isChecked ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
-                  <input type="checkbox" ${isChecked ? 'checked' : ''} onChange="selectedEmpsForExport['${e.id}'] = this.checked; render();" class="w-4 h-4" />
-                  <div class="flex-1">
-                    <div class="font-semibold">${e.name}</div>
+                return `<label class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-gray-50 rounded cursor-pointer border ${isChecked ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onChange="selectedEmpsForExport['${e.id}'] = this.checked; render();" class="w-5 h-5 flex-shrink-0" />
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm sm:text-base truncate">${e.name}</div>
                     <div class="text-xs text-gray-600">ID: ${e.employee_id} • ${e.indoctrinations.length} indocs</div>
                   </div>
-                  <div class="text-xs ${statusColors[s]} font-semibold">${s.toUpperCase()}</div>
+                  <div class="text-xs ${statusColors[s]} font-semibold hidden sm:block">${s.toUpperCase()}</div>
                 </label>`;
               }).join('')}
             </div>
-            <div class="flex gap-2 mt-4">
-              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="flex-1 py-2 border rounded">Cancel</button>
-              <button onClick="exportSelectedEmployees()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Export ${selectedCount > 0 ? '(' + selectedCount + ')' : ''}</button>
+            <div class="flex gap-2 mt-3 sm:mt-4">
+              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="flex-1 py-3 border rounded text-base">Cancel</button>
+              <button onClick="exportSelectedEmployees()" class="flex-1 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 text-base whitespace-nowrap">Export ${selectedCount > 0 ? '(' + selectedCount + ')' : ''}</button>
             </div>
           </div>
         </div>`;
