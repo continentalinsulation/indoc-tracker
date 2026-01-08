@@ -14,6 +14,7 @@
     const SUPABASE_URL = 'https://shncudhuqspawrvbdrza.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNobmN1ZGh1cXNwYXdydmJkcnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDQzMDYsImV4cCI6MjA4MzMyMDMwNn0.G5vZeUcse5pHqZy4vUHSsmc0wfeh9KUWMQF87rAynTo';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let expandedEmps = {};
     const INDOCS = [
       { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
       { id: 'vale_t2_mines', name: 'Tier 2: Mines Orientation', validityDays: 365, client: 'Vale' },
@@ -258,10 +259,46 @@ async function exportEmployeePackage() {
       });
       document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-50 p-6 rounded-lg shadow border-2 border-red-200"><div class="text-3xl font-bold text-red-600">${stats.expired}</div><div class="text-sm text-red-700">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">🔔 Generate Alert Report</button><button onClick="exportEmployeePackage()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📦 Export Training Records</button><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
     }
+    function toggleEmp(id) {
+      expandedEmps[id] = !expandedEmps[id];
+      render();
+    }
     function renderEmp(e) {
       const s = getEmpSt(e);
       const c = { expired: 'border-red-500 bg-red-50', critical: 'border-orange-500 bg-orange-50', warning: 'border-yellow-500 bg-yellow-50', valid: 'border-green-500 bg-green-50', none: 'border-gray-300 bg-white' };
-      return `<div class="border-l-4 ${c[s]} bg-white rounded-lg shadow p-6"><div class="flex justify-between items-start mb-4"><div><h3 class="text-2xl font-bold">${e.name}</h3><p class="text-gray-600">ID: ${e.employee_id}</p><p class="text-sm text-gray-500">${e.email} • ${e.phone}</p></div><div class="flex gap-2"><button onClick="st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">+ Add Indoc</button><button onClick="delEmp('${e.id}')" class="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button></div></div>${e.indoctrinations.length === 0 ? '<p class="text-gray-500 italic">No indoctrinations</p>' : `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">${e.indoctrinations.map(i => renderInd(e.id, i)).join('')}</div>`}</div>`;
+      const isExpanded = expandedEmps[e.id];
+      const indocCount = e.indoctrinations.length;
+      const statusBadges = { expired: 0, critical: 0, warning: 0, valid: 0 };
+      e.indoctrinations.forEach(i => {
+        const st = getSt(i.expiry_date);
+        statusBadges[st.s]++;
+      });
+      return `<div class="border-l-4 ${c[s]} bg-white rounded-lg shadow">
+        <div class="p-4 cursor-pointer hover:bg-gray-50" onClick="toggleEmp('${e.id}')">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3 flex-1">
+              <span class="text-xl transition-transform ${isExpanded ? 'rotate-90' : ''}">▶</span>
+              <div>
+                <h3 class="text-lg font-bold">${e.name}</h3>
+                <p class="text-sm text-gray-600">ID: ${e.employee_id} • ${e.email} • ${e.phone}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1 text-xs">
+                ${indocCount > 0 ? `
+                  ${statusBadges.expired > 0 ? `<span class="px-2 py-1 bg-red-100 text-red-800 rounded font-semibold">🔴 ${statusBadges.expired}</span>` : ''}
+                  ${statusBadges.critical > 0 ? `<span class="px-2 py-1 bg-orange-100 text-orange-800 rounded font-semibold">🟠 ${statusBadges.critical}</span>` : ''}
+                  ${statusBadges.warning > 0 ? `<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-semibold">🟡 ${statusBadges.warning}</span>` : ''}
+                  ${statusBadges.valid > 0 ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded font-semibold">🟢 ${statusBadges.valid}</span>` : ''}
+                ` : '<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded">No indocs</span>'}
+              </div>
+              <button onClick="event.stopPropagation(); st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">+ Indoc</button>
+              <button onClick="event.stopPropagation(); delEmp('${e.id}')" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Delete</button>
+            </div>
+          </div>
+        </div>
+        ${isExpanded ? `<div class="px-4 pb-4 border-t">${e.indoctrinations.length === 0 ? '<p class="text-gray-500 italic mt-4">No indoctrinations</p>' : `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mt-4">${e.indoctrinations.map(i => renderInd(e.id, i)).join('')}</div>`}</div>` : ''}
+      </div>`;
     }
     function renderInd(eid, ind) {
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
