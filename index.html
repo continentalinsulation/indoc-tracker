@@ -16,6 +16,7 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let expandedEmps = {};
     let indocSearch = '';
+    let selectedEmpsForExport = {};
     const INDOCS = [
       { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
       { id: 'vale_t2_mines', name: 'Tier 2: Mines Orientation', validityDays: 365, client: 'Vale' },
@@ -261,14 +262,30 @@ async function exportSingleEmployee(empId) {
   a.click();
 }
 
-async function exportEmployeePackage() {
+function openExportModal() {
+  selectedEmpsForExport = {};
+  st.modal = 'exportSelect';
+  render();
+}
+
+async function exportSelectedEmployees() {
+  const selectedIds = Object.keys(selectedEmpsForExport).filter(id => selectedEmpsForExport[id]);
+  const selectedEmps = st.emps.filter(e => selectedIds.includes(e.id));
+
+  if (selectedEmps.length === 0) {
+    alert('Please select at least one employee to export');
+    return;
+  }
+
   if (!window.JSZip) { alert('Loading export library...'); return; }
+
   const zip = new JSZip();
   let report = 'CONTINENTAL INSULATION - EMPLOYEE TRAINING RECORDS\n';
   report += 'Generated: ' + new Date().toLocaleString() + '\n';
+  report += 'Employees: ' + selectedEmps.length + ' selected\n';
   report += '==============================================\n\n';
 
-  for (const emp of st.emps) {
+  for (const emp of selectedEmps) {
     report += (emp.name || 'Unknown') + ' (ID: ' + (emp.employee_id || emp.id) + ')\n';
     report += 'Email: ' + emp.email + ' | Phone: ' + emp.phone + '\n';
     report += '---\n';
@@ -305,8 +322,20 @@ async function exportEmployeePackage() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'Continental_Training_Records_' + new Date().toISOString().split('T')[0] + '.zip';
+  a.download = 'Continental_Training_Records_' + selectedEmps.length + '_Employees_' + new Date().toISOString().split('T')[0] + '.zip';
   a.click();
+
+  st.modal = null;
+  selectedEmpsForExport = {};
+  render();
+}
+
+function toggleSelectAllEmps() {
+  const allSelected = st.emps.every(e => selectedEmpsForExport[e.id]);
+  st.emps.forEach(e => {
+    selectedEmpsForExport[e.id] = !allSelected;
+  });
+  render();
 }
     let cursorPos = 0;
     function render() {
@@ -317,7 +346,7 @@ async function exportEmployeePackage() {
         if (st.filter === 'all') return true;
         return getEmpSt(e) === st.filter;
       });
-      document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-200 p-6 rounded-lg shadow border-2 border-red-400"><div class="text-3xl font-bold text-red-900">${stats.expired}</div><div class="text-sm text-red-900">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">🔔 Generate Alert Report</button><button onClick="exportEmployeePackage()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📦 Export Training Records</button><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
+      document.getElementById('app').innerHTML = `<div class="min-h-screen p-6"><div class="max-w-7xl mx-auto"><div class="mb-8"><h1 class="text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p></div><div class="grid grid-cols-5 gap-4 mb-6"><div class="bg-white p-6 rounded-lg shadow"><div class="text-3xl font-bold">${stats.total}</div><div class="text-sm text-gray-600">Total</div></div><div class="bg-red-200 p-6 rounded-lg shadow border-2 border-red-400"><div class="text-3xl font-bold text-red-900">${stats.expired}</div><div class="text-sm text-red-900">Expired</div></div><div class="bg-orange-50 p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-6 rounded-lg shadow border-2 border-green-200"><div class="text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-sm text-green-700">Valid</div></div></div><div class="bg-white p-4 rounded-lg shadow mb-6"><div class="flex gap-4 flex-wrap items-center"><input type="text" placeholder="Search..." class="flex-1 min-w-64 px-4 py-2 border rounded-lg" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-4 py-2 border rounded-lg" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">🔔 Generate Alert Report</button><button onClick="openExportModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📦 Export Training Records</button><button onClick="st.modal = 'addEmp'; render();" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
       setTimeout(() => {
         const searchInput = document.getElementById('indocSearchInput');
         if (searchInput) {
@@ -400,6 +429,43 @@ async function exportEmployeePackage() {
      if (st.modal === 'viewReport') {
   return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-96 overflow-y-auto"><div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">Alert Report</h2><button onClick="st.modal = null; render();" class="text-2xl">&times;</button></div><div class="mb-4"><button onClick="navigator.clipboard.writeText(st.report); alert(\'Copied!\');" class="px-4 py-2 bg-green-600 text-white rounded">Copy to Clipboard</button></div><pre class="bg-gray-50 p-4 rounded text-sm whitespace-pre-wrap">' + st.report + '</pre></div></div>';
 }
+      if (st.modal === 'exportSelect') {
+        const selectedCount = Object.keys(selectedEmpsForExport).filter(id => selectedEmpsForExport[id]).length;
+        const allSelected = st.emps.length > 0 && st.emps.every(e => selectedEmpsForExport[e.id]);
+        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-2xl font-bold">Select Employees to Export</h2>
+              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="text-2xl">&times;</button>
+            </div>
+            <div class="mb-4 flex justify-between items-center">
+              <div class="text-sm text-gray-600">${selectedCount} of ${st.emps.length} employees selected</div>
+              <button onClick="toggleSelectAllEmps()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm">
+                ${allSelected ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div class="overflow-y-auto flex-1 border rounded p-4 space-y-2">
+              ${st.emps.map(e => {
+                const s = getEmpSt(e);
+                const statusColors = { expired: 'text-red-700', critical: 'text-orange-700', warning: 'text-yellow-700', valid: 'text-green-700', none: 'text-gray-500' };
+                const isChecked = selectedEmpsForExport[e.id] || false;
+                return `<label class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded cursor-pointer border ${isChecked ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
+                  <input type="checkbox" ${isChecked ? 'checked' : ''} onChange="selectedEmpsForExport['${e.id}'] = this.checked; render();" class="w-4 h-4" />
+                  <div class="flex-1">
+                    <div class="font-semibold">${e.name}</div>
+                    <div class="text-xs text-gray-600">ID: ${e.employee_id} • ${e.indoctrinations.length} indocs</div>
+                  </div>
+                  <div class="text-xs ${statusColors[s]} font-semibold">${s.toUpperCase()}</div>
+                </label>`;
+              }).join('')}
+            </div>
+            <div class="flex gap-2 mt-4">
+              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="flex-1 py-2 border rounded">Cancel</button>
+              <button onClick="exportSelectedEmployees()" class="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Export ${selectedCount > 0 ? '(' + selectedCount + ')' : ''}</button>
+            </div>
+          </div>
+        </div>`;
+      }
 return '';
     }
     async function handleAddEmp() {
