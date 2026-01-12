@@ -3,519 +3,126 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Continental Insulation - Indoctrination Tracker</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Continental Insulation - Management Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="bg-gray-50">
-  <div id="app"></div>
-  <script>
-    const SUPABASE_URL = 'https://shncudhuqspawrvbdrza.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNobmN1ZGh1cXNwYXdydmJkcnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDQzMDYsImV4cCI6MjA4MzMyMDMwNn0.G5vZeUcse5pHqZy4vUHSsmc0wfeh9KUWMQF87rAynTo';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    let expandedEmps = {};
-    let indocSearch = '';
-    let selectedEmpsForExport = {};
-    const INDOCS = [
-      { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t2_mines', name: 'Tier 2: Mines Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t2_surface', name: 'Tier 2: Surface Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_electrowinning', name: 'Tier 3: Electrowinning Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_coleman', name: 'Tier 3: Coleman Mine Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_creighton', name: 'Tier 3: Creighton Mine Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_ccmc', name: 'Tier 3: CCMC Mine Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_garson', name: 'Tier 3: Garson Mine Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_totten', name: 'Tier 3: Totten Mine Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_water', name: 'Tier 3: Water Plants Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_filter', name: 'Tier 3: Filter Plant Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_tailings', name: 'Tier 3: Central Tailings Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_clarabelle', name: 'Tier 3: Clarabelle Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_tipple', name: 'Tier 3: Tipple Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_smelter', name: 'Tier 3: Bulk Smelter Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_acid', name: 'Tier 3: Acid Plant Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_matte', name: 'Tier 3: Matte Pro Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_oxygen', name: 'Tier 3: Oxygen Plant Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_shops', name: 'Tier 3: Divisional Shops Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_transport', name: 'Tier 3: Transportation Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_stobie', name: 'Tier 3: Stobie Mine Surface Plant Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_ccnr', name: 'Tier 3: CCNR Refinery Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_warehouse', name: 'Tier 3: Warehouse Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_naoc', name: 'Tier 3: NAOC Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_napg', name: 'Tier 3: NAPG Surface Projects Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_transport_permit', name: 'Tier 3: Transportation Work Permit Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_training114', name: 'Tier 3: North Atlantic Training Center (114)', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_power', name: 'Tier 3: Power Plants and Dams Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_whmis', name: 'Tier 3: WHMIS Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_geoscience', name: 'Tier 3: Frood-Stobie Geoscience Facility', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_rad1', name: 'Tier 3: Level 1 Radiation Device Awareness', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_rad2', name: 'Tier 3: Level 2 Radiation Safety', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_slope', name: 'Tier 3: Slope Hazard Awareness', validityDays: 365, client: 'Vale' },
-      { id: 'vale_t3_jha', name: 'Tier 3: Job Hazard Analysis (JHA) Training', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car15', name: 'CAR(1-5): Vale Base Metals Awareness', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car06', name: 'CAR06: Confined Spaces', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car07', name: 'CAR07: Machine Guarding', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car08', name: 'CAR08: Ground Stability', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car09', name: 'CAR09: Explosives', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car10', name: 'CAR10: Working with Electricity', validityDays: 365, client: 'Vale' },
-      { id: 'vale_car11', name: 'CAR11: Molten Metal', validityDays: 365, client: 'Vale' },
-      { id: 'vale_zes_review', name: 'ZES Annual Review (ZES003R)', validityDays: 365, client: 'Vale' },
-      { id: 'vale_zes_tagger', name: 'ZES Tagger PT1 Prerequisite (ZES003A)', validityDays: 365, client: 'Vale' },
-      { id: 'vale_zes_energized', name: 'ZES Working on Energized Equipment (ZES003.5)', validityDays: 365, client: 'Vale' },
-      { id: 'vale_supp_rescuer', name: 'Self Contained Self Rescuer', validityDays: 365, client: 'Vale' },
-      { id: 'vale_supp_ems', name: 'Environmental Management System Awareness', validityDays: 365, client: 'Vale' },
-      { id: 'vale_supp_exploration', name: 'General Exploration Orientation', validityDays: 365, client: 'Vale' },
-      { id: 'vale_supp_lifevac', name: 'How to use the LifeVac Device', validityDays: 365, client: 'Vale' },
-      { id: 'glencore_site', name: 'Glencore Site Orientation', validityDays: 730, client: 'Glencore' },
-      { id: 'gen_whmis', name: 'WHMIS 2015', validityDays: 1095, client: 'General' },
-      { id: 'gen_firstaid', name: 'Standard First Aid', validityDays: 1095, client: 'General' }
-    ];
-    let st = { emps: [], load: true, search: '', filter: 'all', modal: null, data: {}, report: '' };
-    async function loadData() {
-      const e = await sb.from('employees').select('*').order('name');
-      const i = await sb.from('indoctrinations').select('*');
-      const d = await sb.from('documents').select('*');
-      st.emps = (e.data || []).map(emp => ({ ...emp, indoctrinations: (i.data || []).filter(x => x.employee_id === emp.id).map(ind => ({ ...ind, documents: (d.data || []).filter(doc => doc.indoctrination_id === ind.id) })) }));
-      st.load = false;
-      render();
-    }
-    async function addEmp(n, eid, em, ph) {
-      await sb.from('employees').insert([{ id: Date.now() + '', name: n, employee_id: eid, email: em, phone: ph }]);
-      await loadData();
-      st.modal = null;
-      render();
-    }
-    async function addInd(eid, tid, cd) {
-      const t = INDOCS.find(x => x.id === tid);
-      const ex = new Date(cd);
-      ex.setDate(ex.getDate() + t.validityDays);
-      await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
-      await loadData();
-      st.modal = null;
-      render();
-    }
-    async function delEmp(id) {
-      if (!confirm('Delete?')) return;
-      await sb.from('employees').delete().eq('id', id);
-      await loadData();
-    }
-    async function delInd(id) {
-      await sb.from('indoctrinations').delete().eq('id', id);
-      await loadData();
-    }
-    async function upDoc(iid, f) {
-      return new Promise(res => {
-        const r = new FileReader();
-        r.onload = async e => {
-          await sb.from('documents').insert([{ id: Date.now() + Math.random() + '', indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result }]);
-          await loadData();
-          res();
-        };
-        r.readAsDataURL(f);
-      });
-    }
-    async function delDoc(id) {
-      if (!confirm('Delete?')) return;
-      await sb.from('documents').delete().eq('id', id);
-      await loadData();
-    }
-    function getSt(ed) {
-      const t = new Date(), e = new Date(ed), d = Math.floor((e - t) / 86400000);
-      if (d < 0) return { s: 'expired', d };
-      if (d <= 30) return { s: 'critical', d };
-      if (d <= 90) return { s: 'warning', d };
-      return { s: 'valid', d };
-    }
-    function getEmpSt(e) {
-      if (!e.indoctrinations.length) return 'none';
-      const ss = e.indoctrinations.map(i => getSt(i.expiry_date).s);
-      if (ss.includes('expired')) return 'expired';
-      if (ss.includes('critical')) return 'critical';
-      if (ss.includes('warning')) return 'warning';
-      return 'valid';
-    }
-    function getStats() {
-      return {
-        total: st.emps.length,
-        expired: st.emps.filter(e => getEmpSt(e) === 'expired').length,
-        critical: st.emps.filter(e => getEmpSt(e) === 'critical').length,
-        warning: st.emps.filter(e => getEmpSt(e) === 'warning').length,
-        valid: st.emps.filter(e => getEmpSt(e) === 'valid').length
-      };
-    }
-    function genReport() {
-  const exp = [], c30 = [], c60 = [], c90 = [];
-  st.emps.forEach(e => {
-    e.indoctrinations.forEach(i => {
-      const s = getSt(i.expiry_date);
-      const t = INDOCS.find(x => x.id === i.indoc_type_id);
-      const dc = i.documents ? i.documents.length : 0;
-      const item = { emp: e.name, eid: e.employee_id, email: e.email, phone: e.phone, indoc: t?.name || 'Unknown', client: t?.client || '', exp: i.expiry_date, days: s.d, docs: dc > 0 ? 'Yes' : 'No' };
-      if (s.d < 0) exp.push(item);
-      else if (s.d <= 30) c30.push(item);
-      else if (s.d <= 60) c60.push(item);
-      else if (s.d <= 90) c90.push(item);
-    });
-  });
-  let r = 'CONTINENTAL INSULATION - EXPIRATION ALERT REPORT\nGenerated: ' + new Date().toLocaleString() + '\n\n';
-  if (exp.length > 0) { r += 'EXPIRED:\n'; exp.forEach(x => { r += x.emp + ' - ' + x.indoc + ' - EXPIRED ' + Math.abs(x.days) + ' days ago\n'; }); r += '\n'; }
-  if (c30.length > 0) { r += 'CRITICAL (<=30 days):\n'; c30.forEach(x => { r += x.emp + ' - ' + x.indoc + ' - ' + x.days + ' days left\n'; }); r += '\n'; }
-  if (c60.length > 0) { r += 'WARNING (31-60 days):\n'; c60.forEach(x => { r += x.emp + ' - ' + x.indoc + ' - ' + x.days + ' days left\n'; }); r += '\n'; }
-  if (c90.length > 0) { r += 'NOTICE (61-90 days):\n'; c90.forEach(x => { r += x.emp + ' - ' + x.indoc + ' - ' + x.days + ' days left\n'; }); r += '\n'; }
-  r += 'SUMMARY: Expired: ' + exp.length + ', Critical: ' + c30.length + ', Warning: ' + c60.length + ', Notice: ' + c90.length;
-  st.report = r;
-  st.modal = 'viewReport';
-  render();
-}
-    function editIndoc(empId, indocId) {
-  const emp = st.emps.find(e => e.id === empId);
-  const indoc = emp.indoctrinations.find(i => i.id === indocId);
-  st.modal = 'editIndoc';
-  st.data = { empId, indocId, indoc };
-  render();
-}
-    async function handleEditIndoc() {
-  const newTid = document.getElementById('editTid').value;
-  const newCd = document.getElementById('editCd').value;
-  const newValidDays = document.getElementById('editValidDays').value;
-  if (!newTid || !newCd) { alert('All fields required'); return; }
-  const t = INDOCS.find(x => x.id === newTid);
-  const validDays = newValidDays ? parseInt(newValidDays) : t.validityDays;
-  const ex = new Date(newCd);
-  ex.setDate(ex.getDate() + validDays);
-  await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
-  await loadData();
-  st.modal = null;
-  render();
-}
+  <div class="min-h-screen p-4 sm:p-6 lg:p-8">
+    <!-- Header -->
+    <div class="max-w-6xl mx-auto mb-8 sm:mb-12">
+      <div class="bg-white rounded-lg shadow-md p-6 sm:p-8 text-center">
+        <h1 class="text-3xl sm:text-5xl font-bold text-gray-800 mb-3">Continental Insulation</h1>
+        <p class="text-xl sm:text-2xl text-gray-600 mb-2">Management Dashboard</p>
+        <p class="text-sm sm:text-base text-gray-500">Select a system to get started</p>
+      </div>
+    </div>
 
-    async function handleEditIndoc() {
-  const newTid = document.getElementById('editTid').value;
-  const newCd = document.getElementById('editCd').value;
-  const newValidDays = document.getElementById('editValidDays').value;
-  if (!newTid || !newCd) { alert('All fields required'); return; }
-  const t = INDOCS.find(x => x.id === newTid);
-  const validDays = newValidDays ? parseInt(newValidDays) : t.validityDays;
-  const ex = new Date(newCd);
-  ex.setDate(ex.getDate() + validDays);
-  await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
-  await loadData();
-  st.modal = null;
-  render();
-}   // <-- This is line 178, the end of handleEditIndoc
+    <!-- System Cards -->
+    <div class="max-w-6xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
-async function exportSingleEmployee(empId) {
-  const emp = st.emps.find(e => e.id === empId);
-  if (!emp) { alert('Employee not found'); return; }
-  if (!window.JSZip) { alert('Loading export library...'); return; }
-
-  const zip = new JSZip();
-  let report = 'CONTINENTAL INSULATION - TRAINING RECORDS\n';
-  report += '==============================================\n\n';
-  report += 'EMPLOYEE INFORMATION\n';
-  report += 'Name: ' + (emp.name || 'Unknown') + '\n';
-  report += 'Employee ID: ' + (emp.employee_id || emp.id) + '\n';
-  report += 'Email: ' + (emp.email || 'N/A') + '\n';
-  report += 'Phone: ' + (emp.phone || 'N/A') + '\n';
-  report += 'Export Date: ' + new Date().toLocaleString() + '\n';
-  report += '==============================================\n\n';
-
-  if (emp.indoctrinations.length === 0) {
-    report += 'No indoctrinations recorded\n';
-  } else {
-    report += 'INDOCTRINATIONS (' + emp.indoctrinations.length + ' total)\n\n';
-
-    emp.indoctrinations.forEach((ind, idx) => {
-      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-      const s = getSt(ind.expiry_date);
-
-      report += (idx + 1) + '. ' + (t?.name || 'Unknown Indoctrination') + '\n';
-      report += '   Client/Category: ' + (t?.client || 'N/A') + '\n';
-      report += '   Completion Date: ' + new Date(ind.completion_date).toLocaleDateString() + '\n';
-      report += '   Expiry Date: ' + new Date(ind.expiry_date).toLocaleDateString() + '\n';
-      report += '   Status: ' + (s.d < 0 ? 'EXPIRED (' + Math.abs(s.d) + ' days ago)' : s.d + ' days remaining') + '\n';
-      report += '   Documents Attached: ' + (ind.documents?.length || 0) + '\n';
-
-      if (ind.documents && ind.documents.length > 0) {
-        const indocFolderName = (idx + 1) + '_' + (t?.name || 'Indoctrination').replace(/[^a-z0-9]/gi, '_').substring(0, 50);
-        const indocFolder = zip.folder(indocFolderName);
-
-        ind.documents.forEach((doc, docIdx) => {
-          const base64Data = doc.data.split(',')[1];
-          const ext = doc.name.split('.').pop() || (doc.type.includes('pdf') ? 'pdf' : 'jpg');
-          const fileName = 'doc_' + (docIdx + 1) + '.' + ext;
-          indocFolder.file(fileName, base64Data, {base64: true});
-        });
-
-        report += '   Document Files: Located in folder "' + indocFolderName + '"\n';
-      }
-      report += '\n';
-    });
-  }
-
-  zip.file('Training_Report.txt', report);
-  const blob = await zip.generateAsync({type: 'blob'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = (emp.name || 'Employee').replace(/[^a-z0-9]/gi, '_') + '_Training_Records_' + new Date().toISOString().split('T')[0] + '.zip';
-  a.click();
-}
-
-function openExportModal() {
-  selectedEmpsForExport = {};
-  st.modal = 'exportSelect';
-  render();
-}
-
-async function exportSelectedEmployees() {
-  const selectedIds = Object.keys(selectedEmpsForExport).filter(id => selectedEmpsForExport[id]);
-  const selectedEmps = st.emps.filter(e => selectedIds.includes(e.id));
-
-  if (selectedEmps.length === 0) {
-    alert('Please select at least one employee to export');
-    return;
-  }
-
-  if (!window.JSZip) { alert('Loading export library...'); return; }
-
-  const zip = new JSZip();
-  let report = 'CONTINENTAL INSULATION - EMPLOYEE TRAINING RECORDS\n';
-  report += 'Generated: ' + new Date().toLocaleString() + '\n';
-  report += 'Employees: ' + selectedEmps.length + ' selected\n';
-  report += '==============================================\n\n';
-
-  for (const emp of selectedEmps) {
-    report += (emp.name || 'Unknown') + ' (ID: ' + (emp.employee_id || emp.id) + ')\n';
-    report += 'Email: ' + emp.email + ' | Phone: ' + emp.phone + '\n';
-    report += '---\n';
-
-    if (emp.indoctrinations.length === 0) {
-      report += 'No indoctrinations recorded\n\n';
-      continue;
-    }
-
-    const empFolder = zip.folder((emp.name || 'Employee_' + emp.id).replace(/[^a-z0-9]/gi, '_'));
-
-    emp.indoctrinations.forEach((ind, idx) => {
-      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-      const s = getSt(ind.expiry_date);
-      report += (idx + 1) + '. ' + (t?.name || 'Unknown') + ' (' + (t?.client || '') + ')\n';
-      report += '   Completed: ' + new Date(ind.completion_date).toLocaleDateString() + '\n';
-      report += '   Expires: ' + new Date(ind.expiry_date).toLocaleDateString() + '\n';
-      report += '   Status: ' + (s.d < 0 ? 'EXPIRED' : s.d + ' days remaining') + '\n';
-      report += '   Documents: ' + (ind.documents?.length || 0) + '\n';
-
-      if (ind.documents && ind.documents.length > 0) {
-        ind.documents.forEach((doc, docIdx) => {
-          const base64Data = doc.data.split(',')[1];
-          const ext = doc.name.split('.').pop() || (doc.type.includes('pdf') ? 'pdf' : 'jpg');
-          empFolder.file((idx + 1) + '_' + (t?.name || 'doc').replace(/[^a-z0-9]/gi, '_') + '_' + docIdx + '.' + ext, base64Data, {base64: true});
-        });
-      }
-    });
-    report += '\n';
-  }
-
-  zip.file('Training_Report.txt', report);
-  const blob = await zip.generateAsync({type: 'blob'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'Continental_Training_Records_' + selectedEmps.length + '_Employees_' + new Date().toISOString().split('T')[0] + '.zip';
-  a.click();
-
-  st.modal = null;
-  selectedEmpsForExport = {};
-  render();
-}
-
-function toggleSelectAllEmps() {
-  const allSelected = st.emps.every(e => selectedEmpsForExport[e.id]);
-  st.emps.forEach(e => {
-    selectedEmpsForExport[e.id] = !allSelected;
-  });
-  render();
-}
-    let cursorPos = 0;
-    function render() {
-      const stats = getStats();
-      const filt = st.emps.filter(e => {
-        const m = e.name.toLowerCase().includes(st.search.toLowerCase()) || e.employee_id.toLowerCase().includes(st.search.toLowerCase());
-        if (!m) return false;
-        if (st.filter === 'all') return true;
-        return getEmpSt(e) === st.filter;
-      });
-      document.getElementById('app').innerHTML = `<div class="min-h-screen p-3 sm:p-6"><div class="max-w-7xl mx-auto"><div class="mb-6 sm:mb-8"><h1 class="text-2xl sm:text-4xl font-bold mb-2">Continental Insulation</h1><p class="text-lg sm:text-xl text-gray-600">Indoctrination Tracking System</p><p class="text-xs sm:text-sm text-green-600 font-semibold mt-2">✓ Cloud • Real-Time • 51 Vale Indocs</p><div class="mt-4"><a href="estimate-tracker.html" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base font-semibold">📋 Go to Estimate Tracker</a></div></div><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6"><div class="bg-white p-3 sm:p-6 rounded-lg shadow"><div class="text-xl sm:text-3xl font-bold">${stats.total}</div><div class="text-xs sm:text-sm text-gray-600">Total</div></div><div class="bg-red-200 p-3 sm:p-6 rounded-lg shadow border-2 border-red-400"><div class="text-xl sm:text-3xl font-bold text-red-900">${stats.expired}</div><div class="text-xs sm:text-sm text-red-900">Expired</div></div><div class="bg-orange-50 p-3 sm:p-6 rounded-lg shadow border-2 border-orange-200"><div class="text-xl sm:text-3xl font-bold text-orange-600">${stats.critical}</div><div class="text-xs sm:text-sm text-orange-700">≤30 Days</div></div><div class="bg-yellow-50 p-3 sm:p-6 rounded-lg shadow border-2 border-yellow-200"><div class="text-xl sm:text-3xl font-bold text-yellow-600">${stats.warning}</div><div class="text-xs sm:text-sm text-yellow-700">≤90 Days</div></div><div class="bg-green-50 p-3 sm:p-6 rounded-lg shadow border-2 border-green-200"><div class="text-xl sm:text-3xl font-bold text-green-600">${stats.valid}</div><div class="text-xs sm:text-sm text-green-700">Valid</div></div></div><div class="bg-white p-3 sm:p-4 rounded-lg shadow mb-4 sm:mb-6"><div class="flex flex-col sm:flex-row gap-2 sm:gap-4"><input type="text" placeholder="Search..." class="w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg text-sm sm:text-base" value="${st.search}" onInput="st.search = this.value; render();" /><select class="px-3 py-2 sm:px-4 sm:py-2 border rounded-lg text-sm sm:text-base" value="${st.filter}" onChange="st.filter = this.value; render();"><option value="all">All</option><option value="expired">Expired</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="valid">Valid</option></select><button onClick="genReport()" class="px-3 py-2 sm:px-4 sm:py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm sm:text-base whitespace-nowrap">🔔 Alert Report</button><button onClick="openExportModal()" class="px-3 py-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap">📦 Export</button><button onClick="st.modal = 'addEmp'; render();" class="px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm sm:text-base whitespace-nowrap">+ Add Employee</button></div></div>${st.load ? '<div class="text-center py-12 text-xl">Loading...</div>' : ''}<div class="space-y-3 sm:space-y-4">${filt.map(renderEmp).join('')}</div></div></div>${renderMod()}`;
-      setTimeout(() => {
-        const searchInput = document.getElementById('indocSearchInput');
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.setSelectionRange(cursorPos, cursorPos);
-        }
-      }, 0);
-    }
-    function toggleEmp(id) {
-      expandedEmps[id] = !expandedEmps[id];
-      render();
-    }
-    function renderEmp(e) {
-      const s = getEmpSt(e);
-      const c = { expired: 'border-red-700 bg-red-200', critical: 'border-orange-500 bg-orange-50', warning: 'border-yellow-500 bg-yellow-50', valid: 'border-green-500 bg-green-50', none: 'border-gray-300 bg-white' };
-      const isExpanded = expandedEmps[e.id];
-      const indocCount = e.indoctrinations.length;
-      const statusBadges = { expired: 0, critical: 0, warning: 0, valid: 0 };
-      e.indoctrinations.forEach(i => {
-        const st = getSt(i.expiry_date);
-        statusBadges[st.s]++;
-      });
-      return `<div class="border-l-4 ${c[s]} bg-white rounded-lg shadow">
-        <div class="p-3 sm:p-4 cursor-pointer hover:bg-gray-50" onClick="toggleEmp('${e.id}')">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <div class="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <span class="text-base sm:text-xl transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}">▶</span>
-              <div class="min-w-0 flex-1">
-                <h3 class="text-base sm:text-lg font-bold truncate">${e.name}</h3>
-                <p class="text-xs sm:text-sm text-gray-600 truncate">ID: ${e.employee_id}</p>
-                <p class="text-xs text-gray-500 truncate sm:hidden">${e.email}</p>
-                <p class="text-xs sm:text-sm text-gray-600 hidden sm:block">${e.email} • ${e.phone}</p>
+        <!-- Indoctrination Tracker Card -->
+        <a href="indoc-tracker.html" class="block group">
+          <div class="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden h-full">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-6 sm:p-8">
+              <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl">👷</span>
               </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white text-center">Indoctrination Tracker</h2>
             </div>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div class="flex gap-1 text-xs flex-wrap">
-                ${indocCount > 0 ? `
-                  ${statusBadges.expired > 0 ? `<span class="px-2 py-1 bg-red-200 text-red-900 rounded font-semibold text-xs">🔴 ${statusBadges.expired}</span>` : ''}
-                  ${statusBadges.critical > 0 ? `<span class="px-2 py-1 bg-orange-100 text-orange-800 rounded font-semibold text-xs">🟠 ${statusBadges.critical}</span>` : ''}
-                  ${statusBadges.warning > 0 ? `<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded font-semibold text-xs">🟡 ${statusBadges.warning}</span>` : ''}
-                  ${statusBadges.valid > 0 ? `<span class="px-2 py-1 bg-green-100 text-green-800 rounded font-semibold text-xs">🟢 ${statusBadges.valid}</span>` : ''}
-                ` : '<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">No indocs</span>'}
+
+            <div class="p-6 sm:p-8">
+              <p class="text-gray-600 mb-6 text-base sm:text-lg leading-relaxed">
+                Track employee safety indoctrinations, training certifications, and compliance status.
+                Monitor expiry dates and maintain up-to-date training records.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">51 Vale indoctrination types</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Real-time expiry tracking</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Document management</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Export & reporting tools</span>
+                </div>
               </div>
-              <div class="flex gap-2">
-                <button onClick="event.stopPropagation(); exportSingleEmployee('${e.id}')" class="flex-1 sm:flex-none px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs sm:text-sm whitespace-nowrap">📦</button>
-                <button onClick="event.stopPropagation(); st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="flex-1 sm:flex-none px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs sm:text-sm whitespace-nowrap">+ Indoc</button>
-                <button onClick="event.stopPropagation(); delEmp('${e.id}')" class="flex-1 sm:flex-none px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-xs sm:text-sm">Delete</button>
+
+              <div class="mt-8">
+                <div class="bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-center font-semibold group-hover:bg-blue-100 transition-colors">
+                  Open Indoc Tracker →
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        ${isExpanded ? `<div class="px-3 sm:px-4 pb-3 sm:pb-4 border-t">${e.indoctrinations.length === 0 ? '<p class="text-gray-500 italic mt-4">No indoctrinations</p>' : `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mt-3 sm:mt-4">${e.indoctrinations.map(i => renderInd(e.id, i)).join('')}</div>`}</div>` : ''}
-      </div>`;
-    }
-    function renderInd(eid, ind) {
-      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-     if (!t) return '<div class="p-2 rounded border border-gray-300 bg-gray-100"><div class="flex justify-between items-center"><div class="text-xs text-red-600">Invalid type</div><button onClick="delInd(\'' + ind.id + '\')" class="text-xs p-1 hover:bg-white rounded text-red-600">🗑️</button></div></div>';
-      const s = getSt(ind.expiry_date);
-      const cfg = { expired: { bg: 'bg-red-200', tx: 'text-red-900', br: 'border-red-500' }, critical: { bg: 'bg-orange-100', tx: 'text-orange-800', br: 'border-orange-300' }, warning: { bg: 'bg-yellow-100', tx: 'text-yellow-800', br: 'border-yellow-300' }, valid: { bg: 'bg-green-100', tx: 'text-green-800', br: 'border-green-300' } }[s.s];
-      const dc = ind.documents ? ind.documents.length : 0;
-      return `<div class="p-2 rounded border ${cfg.br} ${cfg.bg}"><div class="flex justify-between items-start mb-1"><div class="flex-1 min-w-0"><div class="text-xs font-semibold truncate" title="${t?.name || 'Unknown'}">${t?.name || 'Unknown'}</div><div class="text-[10px] text-gray-600">${t?.client || ''}</div></div><div class="flex gap-0.5 ml-1"><label class="cursor-pointer p-0.5 hover:bg-white rounded text-xs"><input type="file" multiple accept="image/*,.pdf" class="hidden" onChange="handleUp(event, '${ind.id}')"><span>📤</span></label>${dc > 0 ? `<button onClick="st.modal = 'viewDocs'; st.data = {ind: ${JSON.stringify(ind).replace(/"/g, '&quot;')}, type: ${JSON.stringify(t).replace(/"/g, '&quot;')}}; render();" class="p-0.5 hover:bg-white rounded text-xs">👁️</button>` : ''}<button onClick="editIndoc('${eid}', '${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">✏️</button><button onClick="delInd('${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">🗑️</button></div></div><div class="text-[10px] space-y-0.5"><div>Exp: ${new Date(ind.expiry_date).toLocaleDateString()}</div><div class="font-bold ${cfg.tx}">${s.d < 0 ? `EXPIRED ${Math.abs(s.d)}d ago` : `${s.d}d left`}</div><div class="mt-1">${dc > 0 ? `<span class="text-green-700 font-semibold">📄 ${dc}</span>` : '<span class="text-gray-500">No docs</span>'}</div></div></div>`;
-    }
-    function renderMod() {
-      if (!st.modal) return '';
-      if (st.modal === 'addEmp') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full"><h2 class="text-xl sm:text-2xl font-bold mb-4">Add Employee</h2><div class="space-y-3 sm:space-y-4"><input id="n" placeholder="Name" class="w-full p-3 border rounded text-base" /><input id="eid" placeholder="Employee ID" class="w-full p-3 border rounded text-base" /><input id="em" placeholder="Email" class="w-full p-3 border rounded text-base" /><input id="ph" placeholder="Phone" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddEmp()" class="flex-1 py-3 bg-green-600 text-white rounded text-base">Add</button></div></div></div></div>`;
-      if (st.modal === 'addInd') {
-        const filteredIndocs = INDOCS.filter(t =>
-          t.name.toLowerCase().includes(indocSearch.toLowerCase()) ||
-          t.client.toLowerCase().includes(indocSearch.toLowerCase())
-        );
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] flex flex-col"><h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Add Indoctrination</h2><div class="space-y-3 sm:space-y-4 overflow-y-auto flex-1"><input id="indocSearchInput" type="text" placeholder="🔍 Search indoctrinations..." class="w-full p-3 border rounded text-base" value="${indocSearch}" onInput="indocSearch = this.value; cursorPos = this.selectionStart; render();" autofocus /><div class="text-xs text-gray-600 -mt-2 mb-1">Showing ${filteredIndocs.length} of ${INDOCS.length} indoctrinations</div><select id="tid" size="6" class="w-full p-2 border rounded text-sm" style="height: 150px;" onChange="document.getElementById('customIndoc').style.display = this.value === 'custom' ? 'block' : 'none';">${filteredIndocs.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}<option value="custom">➕ Custom/Other Indoctrination</option></select><div id="customIndoc" style="display:none;" class="space-y-2"><input id="customName" placeholder="Indoctrination Name" class="w-full p-3 border rounded text-base" /><input id="customClient" placeholder="Client/Category" class="w-full p-3 border rounded text-base" /><input id="customDays" type="number" placeholder="Valid for (days)" class="w-full p-3 border rounded text-base" /></div><input id="cd" type="date" class="w-full p-3 border rounded text-base" /><input id="validDays" type="number" placeholder="Valid for (days) - optional" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; indocSearch = ''; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-3 bg-blue-600 text-white rounded text-base">Add</button></div></div></div></div>`;
-      }
-      if (st.modal === 'viewDocs') {
-        const ind = st.data.ind;
-        const t = st.data.type;
-        const ds = ind.documents || [];
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full my-4 sm:my-8"><div class="flex justify-between items-center mb-4"><div><h2 class="text-lg sm:text-2xl font-bold">Documents</h2><p class="text-xs sm:text-sm text-gray-600 truncate">${t.name}</p></div><button onClick="st.modal = null; render();" class="text-2xl ml-2 flex-shrink-0">&times;</button></div><div class="space-y-3 sm:space-y-4">${ds.map(d => `<div class="border rounded-lg p-3 sm:p-4"><div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2"><div class="min-w-0"><div class="font-semibold text-sm sm:text-base truncate">${d.name}</div><div class="text-xs text-gray-500">Uploaded: ${new Date(d.upload_date).toLocaleDateString()}</div></div><div class="flex gap-2"><a href="${d.data}" download="${d.name}" class="px-3 py-2 bg-blue-500 text-white rounded text-sm whitespace-nowrap">Download</a><button onClick="delDoc('${d.id}')" class="px-3 py-2 bg-red-500 text-white rounded text-sm whitespace-nowrap">Delete</button></div></div>${d.type.startsWith('image/') ? `<img src="${d.data}" class="max-w-full h-auto max-h-96 rounded border" />` : '<div class="bg-gray-100 p-4 rounded text-center"><p class="text-sm">PDF - Download to view</p></div>'}</div>`).join('')}</div></div></div>`;
-      }
-      if (st.modal === 'editIndoc') {
-  const ind = st.data.indoc;
-  const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-  return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full"><h2 class="text-xl sm:text-2xl font-bold mb-4">Edit Indoctrination</h2><div class="space-y-3 sm:space-y-4"><select id="editTid" class="w-full p-3 border rounded text-base"><option value="">Select Indoctrination</option>' + INDOCS.map(type => '<option value="' + type.id + '" ' + (type.id === ind.indoc_type_id ? 'selected' : '') + '>' + type.name + ' (' + type.client + ')</option>').join('') + '</select><input id="editCd" type="date" value="' + ind.completion_date + '" class="w-full p-3 border rounded text-base" /><input id="editValidDays" type="number" placeholder="Valid for (days)" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleEditIndoc()" class="flex-1 py-3 bg-blue-600 text-white rounded text-base">Save</button></div></div></div></div>';
-}
-     if (st.modal === 'viewReport') {
-  return '<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full max-h-[90vh] flex flex-col"><div class="flex justify-between items-center mb-4"><h2 class="text-lg sm:text-2xl font-bold">Alert Report</h2><button onClick="st.modal = null; render();" class="text-2xl ml-2">&times;</button></div><div class="mb-4"><button onClick="navigator.clipboard.writeText(st.report); alert(\'Copied!\');" class="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded text-base">Copy to Clipboard</button></div><pre class="bg-gray-50 p-3 sm:p-4 rounded text-xs sm:text-sm whitespace-pre-wrap overflow-y-auto flex-1">' + st.report + '</pre></div></div>';
-}
-      if (st.modal === 'exportSelect') {
-        const selectedCount = Object.keys(selectedEmpsForExport).filter(id => selectedEmpsForExport[id]).length;
-        const allSelected = st.emps.length > 0 && st.emps.every(e => selectedEmpsForExport[e.id]);
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 sm:p-4 z-50">
-          <div class="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 class="text-lg sm:text-2xl font-bold">Select Employees</h2>
-              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="text-2xl ml-2">&times;</button>
+        </a>
+
+        <!-- Estimate Tracker Card -->
+        <a href="estimate-tracker.html" class="block group">
+          <div class="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden h-full">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 p-6 sm:p-8">
+              <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl">📋</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white text-center">Estimate Tracker</h2>
             </div>
-            <div class="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <div class="text-xs sm:text-sm text-gray-600">${selectedCount} of ${st.emps.length} selected</div>
-              <button onClick="toggleSelectAllEmps()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-sm whitespace-nowrap">
-                ${allSelected ? 'Deselect All' : 'Select All'}
-              </button>
-            </div>
-            <div class="overflow-y-auto flex-1 border rounded p-2 sm:p-4 space-y-2">
-              ${st.emps.map(e => {
-                const s = getEmpSt(e);
-                const statusColors = { expired: 'text-red-700', critical: 'text-orange-700', warning: 'text-yellow-700', valid: 'text-green-700', none: 'text-gray-500' };
-                const isChecked = selectedEmpsForExport[e.id] || false;
-                return `<label class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-gray-50 rounded cursor-pointer border ${isChecked ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
-                  <input type="checkbox" ${isChecked ? 'checked' : ''} onChange="selectedEmpsForExport['${e.id}'] = this.checked; render();" class="w-5 h-5 flex-shrink-0" />
-                  <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-sm sm:text-base truncate">${e.name}</div>
-                    <div class="text-xs text-gray-600">ID: ${e.employee_id} • ${e.indoctrinations.length} indocs</div>
-                  </div>
-                  <div class="text-xs ${statusColors[s]} font-semibold hidden sm:block">${s.toUpperCase()}</div>
-                </label>`;
-              }).join('')}
-            </div>
-            <div class="flex gap-2 mt-3 sm:mt-4">
-              <button onClick="st.modal = null; selectedEmpsForExport = {}; render();" class="flex-1 py-3 border rounded text-base">Cancel</button>
-              <button onClick="exportSelectedEmployees()" class="flex-1 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 text-base whitespace-nowrap">Export ${selectedCount > 0 ? '(' + selectedCount + ')' : ''}</button>
+
+            <div class="p-6 sm:p-8">
+              <p class="text-gray-600 mb-6 text-base sm:text-lg leading-relaxed">
+                Manage quotes and estimates for firm price contract jobs. Track status,
+                deadlines, and collaborate with your estimating team.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Multi-user collaboration</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Password protected access</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Document uploads & storage</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Status & deadline tracking</span>
+                </div>
+              </div>
+
+              <div class="mt-8">
+                <div class="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-center font-semibold group-hover:bg-green-100 transition-colors">
+                  Open Estimate Tracker →
+                </div>
+              </div>
             </div>
           </div>
-        </div>`;
-      }
-return '';
-    }
-    async function handleAddEmp() {
-      const n = document.getElementById('n').value;
-      const eid = document.getElementById('eid').value;
-      const em = document.getElementById('em').value;
-      const ph = document.getElementById('ph').value;
-      if (!n || !eid || !em || !ph) { alert('All fields required'); return; }
-      await addEmp(n, eid, em, ph);
-    }
-    async function handleAddInd() {
-  const tid = document.getElementById('tid').value;
-  const cd = document.getElementById('cd').value;
-  if (!tid || !cd) { alert('All fields required'); return; }
-  if (tid === 'custom') {
-    const cName = document.getElementById('customName').value;
-    const cClient = document.getElementById('customClient').value;
-    const cDays = document.getElementById('customDays').value;
-    if (!cName || !cClient || !cDays) { alert('Fill in all custom fields'); return; }
-    const customIndoc = { id: 'custom_' + Date.now(), name: cName, client: cClient, validityDays: parseInt(cDays) };
-    const ex = new Date(cd);
-    ex.setDate(ex.getDate() + customIndoc.validityDays);
-    await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: customIndoc.id, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
-    INDOCS.push(customIndoc);
-  } else {
-    const validDays = document.getElementById('validDays').value;
-if (validDays) {
-  const t = INDOCS.find(x => x.id === tid);
-  const ex = new Date(cd);
-  ex.setDate(ex.getDate() + parseInt(validDays));
-  await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
-} else {
-  await addInd(st.data.eid, tid, cd);
-}
-  }
-  await loadData();
-  st.modal = null;
-  indocSearch = '';
-  render();
-}
-    async function handleUp(e, iid) {
-      const fs = e.target.files;
-      for (let f of fs) await upDoc(iid, f);
-      e.target.value = '';
-    }
-    loadData();
-  </script>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- Footer Info -->
+    <div class="max-w-6xl mx-auto mt-12">
+      <div class="bg-white rounded-lg shadow-md p-6 text-center">
+        <p class="text-sm text-gray-600">
+          ☁️ Cloud-based • Real-time updates • Secure access
+        </p>
+        <p class="text-xs text-gray-500 mt-2">
+          Both systems use Supabase for secure, reliable data storage
+        </p>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
