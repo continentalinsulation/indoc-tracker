@@ -284,22 +284,55 @@ async function handleEditEstimate() {
 }
 
 // Handle file upload
-function handleFileUpload(estimateId) {
+async function handleFileUpload(estimateId) {
   const fileInput = document.getElementById('fileUpload');
-  const file = fileInput.files[0];
-  if (!file) return;
+  const files = fileInput.files;
+
+  if (!files || files.length === 0) {
+    alert('Please select at least one file to upload.');
+    return;
+  }
 
   const uploadedBy = prompt('Enter your name:');
   if (!uploadedBy) return;
 
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const base64 = e.target.result.split(',')[1];
-    await uploadDoc(estimateId, file.name, file.type, base64, uploadedBy);
+  // Show upload progress
+  const uploadButton = event.target;
+  const originalText = uploadButton.textContent;
+  uploadButton.disabled = true;
+  uploadButton.textContent = 'Uploading...';
+
+  try {
+    // Upload all files
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      uploadButton.textContent = `Uploading ${i + 1}/${files.length}...`;
+
+      // Read file as base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Upload to database
+      await uploadDoc(estimateId, file.name, file.type, base64, uploadedBy);
+    }
+
+    // Clear file input and refresh
+    fileInput.value = '';
+    alert(`Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}!`);
+
     st.modal = 'viewDocs';
     st.data.estimateId = estimateId;
-  };
-  reader.readAsDataURL(file);
+  } catch (error) {
+    console.error('Error uploading files:', error);
+    alert('Failed to upload some files. Please try again.');
+  } finally {
+    uploadButton.disabled = false;
+    uploadButton.textContent = originalText;
+  }
 }
 
 // Download document
@@ -528,8 +561,9 @@ function renderModal() {
             <h2 class="text-2xl font-bold mb-4">Documents - ${est.project_name}</h2>
 
             <div class="mb-4">
-              <label class="block text-sm font-semibold mb-2">Upload Document</label>
-              <input id="fileUpload" type="file" class="border rounded p-2 w-full">
+              <label class="block text-sm font-semibold mb-2">Upload Documents</label>
+              <input id="fileUpload" type="file" multiple class="border rounded p-2 w-full">
+              <p class="text-xs text-gray-500 mt-1">You can select multiple files at once</p>
               <button onClick="handleFileUpload(${est.id})" class="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
                 Upload
               </button>
