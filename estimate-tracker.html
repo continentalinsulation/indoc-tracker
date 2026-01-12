@@ -71,7 +71,7 @@ async function loadData() {
 }
 
 // Add estimate
-async function addEstimate(project_name, client, estimator, estimated_value, status, notes) {
+async function addEstimate(project_name, client, estimator, estimated_value, status, closing_date, notes) {
   const { data, error } = await sb.from('estimates').insert([{
     project_name,
     client,
@@ -79,6 +79,7 @@ async function addEstimate(project_name, client, estimator, estimated_value, sta
     date_created: new Date().toISOString(),
     estimated_value: estimated_value || null,
     status,
+    closing_date: closing_date || null,
     notes: notes || ''
   }]);
 
@@ -193,6 +194,7 @@ async function handleAddEstimate() {
   const estimator = document.getElementById('addEstimator').value.trim();
   const value = document.getElementById('addValue').value.trim();
   const status = document.getElementById('addStatus').value;
+  const closingDate = document.getElementById('addClosingDate').value;
   const notes = document.getElementById('addNotes').value.trim();
 
   if (!projectName || !client || !estimator) {
@@ -201,7 +203,7 @@ async function handleAddEstimate() {
   }
 
   try {
-    await addEstimate(projectName, client, estimator, value, status, notes);
+    await addEstimate(projectName, client, estimator, value, status, closingDate, notes);
     st.modal = null;
     render();
   } catch (error) {
@@ -219,6 +221,7 @@ async function handleEditEstimate() {
   const value = document.getElementById('editValue').value.trim();
   const status = document.getElementById('editStatus').value;
   const dateSent = document.getElementById('editDateSent').value;
+  const closingDate = document.getElementById('editClosingDate').value;
   const notes = document.getElementById('editNotes').value.trim();
 
   if (!projectName || !client || !estimator) {
@@ -234,6 +237,7 @@ async function handleEditEstimate() {
       estimated_value: value || null,
       status: status,
       date_sent: dateSent || null,
+      closing_date: closingDate || null,
       notes: notes
     });
 
@@ -288,6 +292,7 @@ async function exportEstimate(estimateId) {
   info += `Status: ${getStatusLabel(estimate.status)}\n`;
   info += `Date Created: ${formatDate(estimate.date_created)}\n`;
   info += `Date Sent: ${formatDate(estimate.date_sent)}\n`;
+  info += `Closing Date: ${formatDate(estimate.closing_date)}\n`;
   info += `Estimated Value: ${formatCurrency(estimate.estimated_value)}\n`;
   info += `\nNotes:\n${estimate.notes || 'None'}\n`;
 
@@ -384,6 +389,11 @@ function renderModal() {
               </div>
 
               <div>
+                <label class="block text-sm font-semibold mb-1">Closing Date</label>
+                <input id="addClosingDate" type="date" class="w-full border rounded p-2">
+              </div>
+
+              <div>
                 <label class="block text-sm font-semibold mb-1">Notes</label>
                 <textarea id="addNotes" class="w-full border rounded p-2" rows="3" placeholder="Enter any additional notes"></textarea>
               </div>
@@ -445,6 +455,11 @@ function renderModal() {
               <div>
                 <label class="block text-sm font-semibold mb-1">Date Sent</label>
                 <input id="editDateSent" type="date" class="w-full border rounded p-2" value="${est.date_sent ? est.date_sent.split('T')[0] : ''}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Closing Date</label>
+                <input id="editClosingDate" type="date" class="w-full border rounded p-2" value="${est.closing_date ? est.closing_date.split('T')[0] : ''}">
               </div>
 
               <div>
@@ -585,6 +600,10 @@ function renderEstimate(est) {
         <div>
           <span class="text-gray-500">Sent:</span>
           <span class="ml-1 font-medium">${formatDate(est.date_sent)}</span>
+        </div>
+        <div>
+          <span class="text-gray-500">Closing:</span>
+          <span class="ml-1 font-medium">${formatDate(est.closing_date)}</span>
         </div>
       </div>
 
