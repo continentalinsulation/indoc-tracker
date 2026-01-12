@@ -113,7 +113,7 @@ async function addEstimate(project_name, client, estimator, estimated_value, sta
     date_created: new Date().toISOString(),
     estimated_value: estimated_value || null,
     status,
-    closing_date: closing_date || null,
+    closing_date: closing_date ? closing_date : null,
     notes: notes || ''
   }]);
 
@@ -190,7 +190,13 @@ function formatCurrency(value) {
 // Format date
 function formatDate(dateString) {
   if (!dateString) return '-';
-  const date = new Date(dateString);
+
+  // Extract just the date part (YYYY-MM-DD) to avoid timezone issues
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-');
+
+  // Create date in local timezone
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
