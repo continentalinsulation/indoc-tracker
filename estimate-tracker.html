@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental Insulation - Estimate Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body class="bg-gray-50">
+<script>
+// Supabase client initialization
+const sb = supabase.createClient(
+  'https://shncudhuqspawrvbdrza.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNobmN1ZGh1cXNwYXdydmJkcnphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5NTgxNDUsImV4cCI6MjA1MTUzNDE0NX0.kQRYU0lMM8Qiht0dS1UqYKlYh6Qc1K_uWfKd5uB-Gxg'
+);
+
+// Status options
+const STATUSES = [
+  { value: 'draft', label: 'Draft', color: 'gray' },
+  { value: 'sent', label: 'Sent', color: 'blue' },
+  { value: 'approved', label: 'Approved', color: 'green' },
+  { value: 'rejected', label: 'Rejected', color: 'red' },
+  { value: 'won', label: 'Won', color: 'emerald' },
+  { value: 'lost', label: 'Lost', color: 'orange' }
+];
+
+// Global state
+let st = {
+  estimates: [],
+  load: true,
+  search: '',
+  filter: 'all',
+  modal: null,
+  data: {},
+  sortBy: 'date_created',
+  sortDir: 'desc'
+};
+
+// Load all data
+async function loadData() {
+  st.load = true;
+  render();
+
+  const e = await sb.from('estimates').select('*').order('created_at', { ascending: false });
+  const d = await sb.from('estimate_documents').select('*');
+
+  st.estimates = (e.data || []).map(est => ({
+    ...est,
+    documents: (d.data || []).filter(doc => doc.estimate_id === est.id)
+  }));
+
+  st.load = false;
+  render();
+}
+
+// Add estimate
+async function addEstimate(project_name, client, estimator, estimated_value, status, notes) {
+  await sb.from('estimates').insert([{
+    project_name,
+    client,
+    estimator,
+    date_created: new Date().toISOString(),
+    estimated_value: estimated_value || null,
+    status,
+    notes: notes || ''
+  }]);
+  await loadData();
+}
+
+// Update estimate
+async function updateEstimate(id, updates) {
+  await sb.from('estimates').update({
+    ...updates,
+    updated_at: new Date().toISOString()
+  }).eq('id', id);
+  await loadData();
+}
+
+// Delete estimate
+async function deleteEstimate(id) {
+  // Delete associated documents first
+  await sb.from('estimate_documents').delete().eq('estimate_id', id);
+  await sb.from('estimates').delete().eq('id', id);
+  await loadData();
+}
+
+// Upload document
+async function uploadDoc(estimate_id, name, type, data, uploaded_by) {
+  await sb.from('estimate_documents').insert([{
+    estimate_id,
+    name,
+    type,
+    data,
+    uploaded_by,
+    uploaded_at: new Date().toISOString()
+  }]);
+  await loadData();
+}
+
+// Delete document
+async function deleteDoc(id) {
+  await sb.from('estimate_documents').delete().eq('id', id);
+  await loadData();
+}
+
+// Get status color
+function getStatusColor(status) {
+  const s = STATUSES.find(x => x.value === status);
+  return s ? s.color : 'gray';
+}
+
+// Get status label
+function getStatusLabel(status) {
+  const s = STATUSES.find(x => x.value === status);
+  return s ? s.label : status;
+}
+
+// Format currency
+function formatCurrency(value) {
+  if (!value) return '-';
+  return '$' + parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Format date
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Get statistics
+function getStats() {
+  const stats = {
+    total: st.estimates.length,
+    draft: 0,
+    sent: 0,
+    approved: 0,
+    rejected: 0,
+    won: 0,
+    lost: 0,
+    totalValue: 0,
+    wonValue: 0
+  };
+
+  st.estimates.forEach(est => {
+    stats[est.status]++;
+    if (est.estimated_value) {
+      stats.totalValue += parseFloat(est.estimated_value);
+      if (est.status === 'won') {
+        stats.wonValue += parseFloat(est.estimated_value);
+      }
+    }
+  });
+
+  return stats;
+}
+
+// Handle add estimate
+function handleAddEstimate() {
+  const projectName = document.getElementById('addProjectName').value.trim();
+  const client = document.getElementById('addClient').value.trim();
+  const estimator = document.getElementById('addEstimator').value.trim();
+  const value = document.getElementById('addValue').value.trim();
+  const status = document.getElementById('addStatus').value;
+  const notes = document.getElementById('addNotes').value.trim();
+
+  if (!projectName || !client || !estimator) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  addEstimate(projectName, client, estimator, value, status, notes);
+  st.modal = null;
+  render();
+}
+
+// Handle edit estimate
+function handleEditEstimate() {
+  const id = st.data.editId;
+  const projectName = document.getElementById('editProjectName').value.trim();
+  const client = document.getElementById('editClient').value.trim();
+  const estimator = document.getElementById('editEstimator').value.trim();
+  const value = document.getElementById('editValue').value.trim();
+  const status = document.getElementById('editStatus').value;
+  const dateSent = document.getElementById('editDateSent').value;
+  const notes = document.getElementById('editNotes').value.trim();
+
+  if (!projectName || !client || !estimator) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  updateEstimate(id, {
+    project_name: projectName,
+    client: client,
+    estimator: estimator,
+    estimated_value: value || null,
+    status: status,
+    date_sent: dateSent || null,
+    notes: notes
+  });
+
+  st.modal = null;
+  render();
+}
+
+// Handle file upload
+function handleFileUpload(estimateId) {
+  const fileInput = document.getElementById('fileUpload');
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const uploadedBy = prompt('Enter your name:');
+  if (!uploadedBy) return;
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const base64 = e.target.result.split(',')[1];
+    await uploadDoc(estimateId, file.name, file.type, base64, uploadedBy);
+    st.modal = 'viewDocs';
+    st.data.estimateId = estimateId;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Download document
+function downloadDoc(doc) {
+  const link = document.createElement('a');
+  link.href = 'data:' + doc.type + ';base64,' + doc.data;
+  link.download = doc.name;
+  link.click();
+}
+
+// Export estimate
+async function exportEstimate(estimateId) {
+  const estimate = st.estimates.find(e => e.id === estimateId);
+  if (!estimate) return;
+
+  const zip = new JSZip();
+
+  // Create info file
+  let info = `ESTIMATE INFORMATION\n`;
+  info += `===================\n\n`;
+  info += `Project: ${estimate.project_name}\n`;
+  info += `Client: ${estimate.client}\n`;
+  info += `Estimator: ${estimate.estimator}\n`;
+  info += `Status: ${getStatusLabel(estimate.status)}\n`;
+  info += `Date Created: ${formatDate(estimate.date_created)}\n`;
+  info += `Date Sent: ${formatDate(estimate.date_sent)}\n`;
+  info += `Estimated Value: ${formatCurrency(estimate.estimated_value)}\n`;
+  info += `\nNotes:\n${estimate.notes || 'None'}\n`;
+
+  zip.file('estimate-info.txt', info);
+
+  // Add documents
+  if (estimate.documents.length > 0) {
+    const docsFolder = zip.folder('documents');
+    estimate.documents.forEach(doc => {
+      docsFolder.file(doc.name, doc.data, { base64: true });
+    });
+  }
+
+  const content = await zip.generateAsync({ type: 'blob' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(content);
+  link.download = `${estimate.project_name.replace(/[^a-z0-9]/gi, '_')}_estimate.zip`;
+  link.click();
+}
+
+// Generate report
+function generateReport() {
+  const stats = getStats();
+  let report = `ESTIMATE TRACKER REPORT\n`;
+  report += `Generated: ${new Date().toLocaleString()}\n`;
+  report += `========================\n\n`;
+
+  report += `SUMMARY\n`;
+  report += `-------\n`;
+  report += `Total Estimates: ${stats.total}\n`;
+  report += `Draft: ${stats.draft}\n`;
+  report += `Sent: ${stats.sent}\n`;
+  report += `Approved: ${stats.approved}\n`;
+  report += `Rejected: ${stats.rejected}\n`;
+  report += `Won: ${stats.won}\n`;
+  report += `Lost: ${stats.lost}\n`;
+  report += `Total Estimated Value: ${formatCurrency(stats.totalValue)}\n`;
+  report += `Won Value: ${formatCurrency(stats.wonValue)}\n\n`;
+
+  // Group by status
+  STATUSES.forEach(status => {
+    const estimates = st.estimates.filter(e => e.status === status.value);
+    if (estimates.length === 0) return;
+
+    report += `\n${status.label.toUpperCase()} (${estimates.length})\n`;
+    report += `${'-'.repeat(status.label.length + 10)}\n`;
+
+    estimates.forEach(est => {
+      report += `- ${est.project_name} | ${est.client} | ${est.estimator} | ${formatCurrency(est.estimated_value)}\n`;
+    });
+  });
+
+  return report;
+}
+
+// Render modal
+function renderModal() {
+  if (st.modal === null) return '';
+
+  // Add estimate modal
+  if (st.modal === 'addEstimate') {
+    return `
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick="if(event.target === this) { st.modal = null; render(); }">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold mb-4">Add New Estimate</h2>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Project Name *</label>
+                <input id="addProjectName" type="text" class="w-full border rounded p-2" placeholder="Enter project name">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Client *</label>
+                <input id="addClient" type="text" class="w-full border rounded p-2" placeholder="Enter client name">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Estimator *</label>
+                <input id="addEstimator" type="text" class="w-full border rounded p-2" placeholder="Enter your name">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Estimated Value</label>
+                <input id="addValue" type="number" step="0.01" class="w-full border rounded p-2" placeholder="0.00">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Status *</label>
+                <select id="addStatus" class="w-full border rounded p-2">
+                  ${STATUSES.map(s => `<option value="${s.value}">${s.label}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Notes</label>
+                <textarea id="addNotes" class="w-full border rounded p-2" rows="3" placeholder="Enter any additional notes"></textarea>
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+              <button onClick="handleAddEstimate()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                Add Estimate
+              </button>
+              <button onClick="st.modal = null; render();" class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Edit estimate modal
+  if (st.modal === 'editEstimate') {
+    const est = st.estimates.find(e => e.id === st.data.editId);
+    if (!est) return '';
+
+    return `
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick="if(event.target === this) { st.modal = null; render(); }">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold mb-4">Edit Estimate</h2>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold mb-1">Project Name *</label>
+                <input id="editProjectName" type="text" class="w-full border rounded p-2" value="${est.project_name}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Client *</label>
+                <input id="editClient" type="text" class="w-full border rounded p-2" value="${est.client}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Estimator *</label>
+                <input id="editEstimator" type="text" class="w-full border rounded p-2" value="${est.estimator}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Estimated Value</label>
+                <input id="editValue" type="number" step="0.01" class="w-full border rounded p-2" value="${est.estimated_value || ''}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Status *</label>
+                <select id="editStatus" class="w-full border rounded p-2">
+                  ${STATUSES.map(s => `<option value="${s.value}" ${est.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Date Sent</label>
+                <input id="editDateSent" type="date" class="w-full border rounded p-2" value="${est.date_sent ? est.date_sent.split('T')[0] : ''}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-1">Notes</label>
+                <textarea id="editNotes" class="w-full border rounded p-2" rows="3">${est.notes || ''}</textarea>
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-6">
+              <button onClick="handleEditEstimate()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Save Changes
+              </button>
+              <button onClick="st.modal = null; render();" class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // View documents modal
+  if (st.modal === 'viewDocs') {
+    const est = st.estimates.find(e => e.id === st.data.estimateId);
+    if (!est) return '';
+
+    return `
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick="if(event.target === this) { st.modal = null; render(); }">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold mb-4">Documents - ${est.project_name}</h2>
+
+            <div class="mb-4">
+              <label class="block text-sm font-semibold mb-2">Upload Document</label>
+              <input id="fileUpload" type="file" class="border rounded p-2 w-full">
+              <button onClick="handleFileUpload(${est.id})" class="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                Upload
+              </button>
+            </div>
+
+            <div class="border-t pt-4">
+              <h3 class="font-semibold mb-2">Uploaded Documents (${est.documents.length})</h3>
+
+              ${est.documents.length === 0 ? '<p class="text-gray-500">No documents uploaded yet</p>' : ''}
+
+              <div class="space-y-2">
+                ${est.documents.map(doc => `
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div class="flex-1">
+                      <div class="font-medium">${doc.name}</div>
+                      <div class="text-sm text-gray-500">
+                        Uploaded by ${doc.uploaded_by} on ${formatDate(doc.uploaded_at)}
+                      </div>
+                    </div>
+                    <div class="flex gap-2">
+                      <button onClick='downloadDoc(${JSON.stringify(doc)})' class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                        Download
+                      </button>
+                      <button onClick="if(confirm('Delete this document?')) { deleteDoc(${doc.id}); }" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <button onClick="st.modal = null; render();" class="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // View report modal
+  if (st.modal === 'viewReport') {
+    const report = generateReport();
+
+    return `
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick="if(event.target === this) { st.modal = null; render(); }">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold mb-4">Estimate Report</h2>
+
+            <pre class="bg-gray-50 p-4 rounded text-sm overflow-x-auto whitespace-pre-wrap">${report}</pre>
+
+            <div class="flex gap-2 mt-6">
+              <button onClick="navigator.clipboard.writeText(\`${report.replace(/`/g, '\\`')}\`); alert('Report copied to clipboard!');" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Copy to Clipboard
+              </button>
+              <button onClick="st.modal = null; render();" class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return '';
+}
+
+// Render estimate card
+function renderEstimate(est) {
+  const color = getStatusColor(est.status);
+
+  return `
+    <div class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+        <div class="flex-1">
+          <h3 class="text-lg font-bold text-gray-800">${est.project_name}</h3>
+          <p class="text-gray-600">${est.client}</p>
+        </div>
+        <span class="bg-${color}-100 text-${color}-800 px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap">
+          ${getStatusLabel(est.status)}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
+        <div>
+          <span class="text-gray-500">Estimator:</span>
+          <span class="ml-1 font-medium">${est.estimator}</span>
+        </div>
+        <div>
+          <span class="text-gray-500">Value:</span>
+          <span class="ml-1 font-medium">${formatCurrency(est.estimated_value)}</span>
+        </div>
+        <div>
+          <span class="text-gray-500">Created:</span>
+          <span class="ml-1 font-medium">${formatDate(est.date_created)}</span>
+        </div>
+        <div>
+          <span class="text-gray-500">Sent:</span>
+          <span class="ml-1 font-medium">${formatDate(est.date_sent)}</span>
+        </div>
+      </div>
+
+      ${est.notes ? `<p class="text-sm text-gray-600 mb-3 line-clamp-2">${est.notes}</p>` : ''}
+
+      <div class="flex items-center justify-between text-sm border-t pt-3">
+        <span class="text-gray-500">${est.documents.length} document${est.documents.length !== 1 ? 's' : ''}</span>
+
+        <div class="flex gap-2">
+          <button onClick="st.data.estimateId = ${est.id}; st.modal = 'viewDocs'; render();"
+                  class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 text-xs">
+            Documents
+          </button>
+          <button onClick="st.data.editId = ${est.id}; st.modal = 'editEstimate'; render();"
+                  class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs">
+            Edit
+          </button>
+          <button onClick="exportEstimate(${est.id})"
+                  class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs">
+            Export
+          </button>
+          <button onClick="if(confirm('Delete this estimate and all its documents?')) { deleteEstimate(${est.id}); }"
+                  class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-xs">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Main render function
+function render() {
+  const stats = getStats();
+
+  // Filter estimates
+  let filtered = st.estimates.filter(est => {
+    // Search filter
+    if (st.search) {
+      const s = st.search.toLowerCase();
+      if (!est.project_name.toLowerCase().includes(s) &&
+          !est.client.toLowerCase().includes(s) &&
+          !est.estimator.toLowerCase().includes(s)) {
+        return false;
+      }
+    }
+
+    // Status filter
+    if (st.filter !== 'all' && est.status !== st.filter) {
+      return false;
+    }
+
+    return true;
+  });
+
+  document.body.innerHTML = `
+    <div class="min-h-screen p-4 sm:p-6 lg:p-8">
+      <!-- Header -->
+      <div class="max-w-7xl mx-auto mb-6">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">Continental Insulation</h1>
+          <h2 class="text-xl sm:text-2xl text-gray-600">Estimate Tracker</h2>
+        </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="max-w-7xl mx-auto mb-6">
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-gray-800">${stats.total}</div>
+            <div class="text-sm text-gray-500">Total</div>
+          </div>
+          <div class="bg-gray-100 rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-gray-800">${stats.draft}</div>
+            <div class="text-sm text-gray-500">Draft</div>
+          </div>
+          <div class="bg-blue-100 rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-blue-800">${stats.sent}</div>
+            <div class="text-sm text-blue-600">Sent</div>
+          </div>
+          <div class="bg-green-100 rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-green-800">${stats.approved}</div>
+            <div class="text-sm text-green-600">Approved</div>
+          </div>
+          <div class="bg-red-100 rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-red-800">${stats.rejected}</div>
+            <div class="text-sm text-red-600">Rejected</div>
+          </div>
+          <div class="bg-emerald-100 rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-emerald-800">${stats.won}</div>
+            <div class="text-sm text-emerald-600">Won</div>
+          </div>
+          <div class="bg-orange-100 rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-orange-800">${stats.lost}</div>
+            <div class="text-sm text-orange-600">Lost</div>
+          </div>
+          <div class="bg-purple-100 rounded-lg shadow p-4">
+            <div class="text-xl font-bold text-purple-800">${formatCurrency(stats.wonValue)}</div>
+            <div class="text-sm text-purple-600">Won Value</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="max-w-7xl mx-auto mb-6">
+        <div class="bg-white rounded-lg shadow-md p-4">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search estimates..."
+              class="flex-1 border rounded p-2"
+              value="${st.search}"
+              onInput="st.search = this.value; render();"
+            >
+
+            <select class="border rounded p-2" onChange="st.filter = this.value; render();">
+              <option value="all" ${st.filter === 'all' ? 'selected' : ''}>All Status</option>
+              ${STATUSES.map(s => `<option value="${s.value}" ${st.filter === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
+            </select>
+
+            <button onClick="st.modal = 'addEstimate'; render();" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 whitespace-nowrap">
+              + Add Estimate
+            </button>
+
+            <button onClick="st.modal = 'viewReport'; render();" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 whitespace-nowrap">
+              View Report
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estimates List -->
+      <div class="max-w-7xl mx-auto">
+        ${st.load ? `
+          <div class="bg-white rounded-lg shadow-md p-12 text-center">
+            <div class="text-gray-500">Loading estimates...</div>
+          </div>
+        ` : filtered.length === 0 ? `
+          <div class="bg-white rounded-lg shadow-md p-12 text-center">
+            <div class="text-gray-500">No estimates found</div>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            ${filtered.map(est => renderEstimate(est)).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+
+    ${renderModal()}
+  `;
+}
+
+// Initialize
+loadData();
+</script>
+</body>
+</html>
