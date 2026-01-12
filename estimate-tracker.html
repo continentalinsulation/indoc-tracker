@@ -43,13 +43,28 @@ async function loadData() {
   st.load = true;
   render();
 
+  console.log('Loading estimates from database...');
   const e = await sb.from('estimates').select('*').order('created_at', { ascending: false });
   const d = await sb.from('estimate_documents').select('*');
+
+  if (e.error) {
+    console.error('Error loading estimates:', e.error);
+    alert('Failed to load estimates: ' + e.error.message);
+    st.load = false;
+    render();
+    return;
+  }
+
+  if (d.error) {
+    console.error('Error loading documents:', d.error);
+  }
 
   st.estimates = (e.data || []).map(est => ({
     ...est,
     documents: (d.data || []).filter(doc => doc.estimate_id === est.id)
   }));
+
+  console.log('Loaded estimates:', st.estimates.length);
 
   st.load = false;
   render();
@@ -57,7 +72,7 @@ async function loadData() {
 
 // Add estimate
 async function addEstimate(project_name, client, estimator, estimated_value, status, notes) {
-  await sb.from('estimates').insert([{
+  const { data, error } = await sb.from('estimates').insert([{
     project_name,
     client,
     estimator,
@@ -66,15 +81,29 @@ async function addEstimate(project_name, client, estimator, estimated_value, sta
     status,
     notes: notes || ''
   }]);
+
+  if (error) {
+    console.error('Supabase error:', error);
+    throw new Error(error.message || 'Failed to add estimate');
+  }
+
+  console.log('Estimate added successfully:', data);
   await loadData();
 }
 
 // Update estimate
 async function updateEstimate(id, updates) {
-  await sb.from('estimates').update({
+  const { data, error } = await sb.from('estimates').update({
     ...updates,
     updated_at: new Date().toISOString()
   }).eq('id', id);
+
+  if (error) {
+    console.error('Supabase error:', error);
+    throw new Error(error.message || 'Failed to update estimate');
+  }
+
+  console.log('Estimate updated successfully:', data);
   await loadData();
 }
 
