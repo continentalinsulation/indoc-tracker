@@ -17,7 +17,7 @@
     let expandedEmps = {};
     let indocSearch = '';
     let selectedEmpsForExport = {};
-    const INDOCS = [
+    let INDOCS = [
       { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
       { id: 'vale_t2_mines', name: 'Tier 2: Mines Orientation', validityDays: 365, client: 'Vale' },
       { id: 'vale_t2_surface', name: 'Tier 2: Surface Orientation', validityDays: 365, client: 'Vale' },
@@ -75,6 +75,23 @@
       const e = await sb.from('employees').select('*').order('name');
       const i = await sb.from('indoctrinations').select('*');
       const d = await sb.from('documents').select('*');
+      const c = await sb.from('custom_indoctrinations').select('*');
+
+      // Reset INDOCS to base list (71 hardcoded items)
+      INDOCS = INDOCS.filter(indoc => !indoc.id.startsWith('custom_'));
+
+      // Add custom indocs from database
+      if (c.data && c.data.length > 0) {
+        c.data.forEach(custom => {
+          INDOCS.push({
+            id: custom.id,
+            name: custom.name,
+            client: custom.client,
+            validityDays: custom.validity_days
+          });
+        });
+      }
+
       st.emps = (e.data || []).map(emp => ({ ...emp, indoctrinations: (i.data || []).filter(x => x.employee_id === emp.id).map(ind => ({ ...ind, documents: (d.data || []).filter(doc => doc.indoctrination_id === ind.id) })) }));
       st.load = false;
       render();
@@ -492,8 +509,17 @@ return '';
     const customIndoc = { id: 'custom_' + Date.now(), name: cName, client: cClient, validityDays: parseInt(cDays) };
     const ex = new Date(cd);
     ex.setDate(ex.getDate() + customIndoc.validityDays);
+
+    // Save custom indoc to database so all users can see it
+    await sb.from('custom_indoctrinations').insert([{
+      id: customIndoc.id,
+      name: customIndoc.name,
+      client: customIndoc.client,
+      validity_days: customIndoc.validityDays
+    }]);
+
+    // Create the indoctrination record
     await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: customIndoc.id, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
-    INDOCS.push(customIndoc);
   } else {
     const validDays = document.getElementById('validDays').value;
 if (validDays) {
