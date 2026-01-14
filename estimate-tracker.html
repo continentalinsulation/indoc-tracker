@@ -562,10 +562,13 @@ function renderModal() {
 
     return `
       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick="if(event.target === this) { st.modal = null; render(); }">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div class="p-6">
-            <h2 class="text-2xl font-bold mb-4">Documents - ${est.project_name}</h2>
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div class="flex justify-between items-center p-6 border-b flex-shrink-0">
+            <h2 class="text-2xl font-bold">Documents - ${est.project_name}</h2>
+            <button onClick="st.modal = null; render();" class="text-2xl ml-4 flex-shrink-0 hover:bg-gray-100 rounded w-8 h-8 flex items-center justify-center">&times;</button>
+          </div>
 
+          <div class="overflow-y-auto flex-1 p-6">
             <div class="mb-4">
               <label class="block text-sm font-semibold mb-2">Upload Documents</label>
               <input id="fileUpload" type="file" multiple class="border rounded p-2 w-full">
@@ -600,12 +603,6 @@ function renderModal() {
                   </div>
                 `).join('')}
               </div>
-            </div>
-
-            <div class="mt-6">
-              <button onClick="st.modal = null; render();" class="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
-                Close
-              </button>
             </div>
           </div>
         </div>
