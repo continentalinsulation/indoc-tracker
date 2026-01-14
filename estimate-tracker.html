@@ -49,7 +49,8 @@ async function loadData() {
 
   console.log('Loading estimates from database...');
   const e = await sb.from('estimates').select('*').order('created_at', { ascending: false });
-  const d = await sb.from('estimate_documents').select('*');
+  // PERFORMANCE: Only load document IDs initially, not the full data with base64 content
+  const d = await sb.from('estimate_documents').select('id, estimate_id');
 
   if (e.error) {
     console.error('Error loading estimates:', e.error);
@@ -65,12 +66,32 @@ async function loadData() {
 
   st.estimates = (e.data || []).map(est => ({
     ...est,
-    documents: (d.data || []).filter(doc => doc.estimate_id === est.id)
+    docCount: (d.data || []).filter(doc => doc.estimate_id === est.id).length,
+    documents: [] // Load full documents only when viewing
   }));
 
   console.log('Loaded estimates:', st.estimates.length);
 
   st.load = false;
+  render();
+}
+
+// Load full documents for a specific estimate (lazy loading for performance)
+async function loadDocsForEstimate(estimateId) {
+  const docs = await sb.from('estimate_documents').select('*').eq('estimate_id', estimateId);
+  return docs.data || [];
+}
+
+// Open viewDocs modal with lazy loading
+async function openViewDocs(estimateId) {
+  const est = st.estimates.find(e => e.id === estimateId);
+  if (!est) return;
+
+  // Load full documents only when viewing
+  est.documents = await loadDocsForEstimate(estimateId);
+
+  st.modal = 'viewDocs';
+  st.data.estimateId = estimateId;
   render();
 }
 
@@ -330,8 +351,11 @@ async function handleFileUpload(estimateId) {
     fileInput.value = '';
     alert(`Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}!`);
 
-    st.modal = 'viewDocs';
-    st.data.estimateId = estimateId;
+    // Reload all data to update document counts
+    await loadData();
+
+    // Open the modal with lazy-loaded documents
+    await openViewDocs(estimateId);
   } catch (error) {
     console.error('Error uploading files:', error);
     alert('Failed to upload some files. Please try again.');
@@ -562,10 +586,13 @@ function renderModal() {
 
     return `
       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick="if(event.target === this) { st.modal = null; render(); }">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div class="p-6">
-            <h2 class="text-2xl font-bold mb-4">Documents - ${est.project_name}</h2>
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div class="flex justify-between items-center p-6 border-b flex-shrink-0">
+            <h2 class="text-2xl font-bold">Documents - ${est.project_name}</h2>
+            <button onClick="st.modal = null; render();" class="text-2xl ml-4 flex-shrink-0 hover:bg-gray-100 rounded w-8 h-8 flex items-center justify-center">&times;</button>
+          </div>
 
+          <div class="overflow-y-auto flex-1 p-6">
             <div class="mb-4">
               <label class="block text-sm font-semibold mb-2">Upload Documents</label>
               <input id="fileUpload" type="file" multiple class="border rounded p-2 w-full">
@@ -600,12 +627,6 @@ function renderModal() {
                   </div>
                 `).join('')}
               </div>
-            </div>
-
-            <div class="mt-6">
-              <button onClick="st.modal = null; render();" class="w-full bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">
-                Close
-              </button>
             </div>
           </div>
         </div>
@@ -684,10 +705,10 @@ function renderEstimate(est) {
       ${est.notes ? `<p class="text-sm text-gray-600 mb-3 line-clamp-2">${est.notes}</p>` : ''}
 
       <div class="flex items-center justify-between text-sm border-t pt-3">
-        <span class="text-gray-500">${est.documents.length} document${est.documents.length !== 1 ? 's' : ''}</span>
+        <span class="text-gray-500">${est.docCount || 0} document${(est.docCount || 0) !== 1 ? 's' : ''}</span>
 
         <div class="flex gap-2">
-          <button onClick="st.data.estimateId = ${est.id}; st.modal = 'viewDocs'; render();"
+          <button onClick="openViewDocs(${est.id})"
                   class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 text-xs">
             Documents
           </button>
