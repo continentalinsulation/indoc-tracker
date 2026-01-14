@@ -74,7 +74,8 @@
     async function loadData() {
       const e = await sb.from('employees').select('*').order('name');
       const i = await sb.from('indoctrinations').select('*');
-      const d = await sb.from('documents').select('*');
+      // PERFORMANCE: Don't load document DATA here - just count them
+      const d = await sb.from('documents').select('id, indoctrination_id');
       const c = await sb.from('custom_indoctrinations').select('*');
 
       // Reset INDOCS to base list (71 hardcoded items)
@@ -92,7 +93,14 @@
         });
       }
 
-      st.emps = (e.data || []).map(emp => ({ ...emp, indoctrinations: (i.data || []).filter(x => x.employee_id === emp.id).map(ind => ({ ...ind, documents: (d.data || []).filter(doc => doc.indoctrination_id === ind.id) })) }));
+      st.emps = (e.data || []).map(emp => ({
+        ...emp,
+        indoctrinations: (i.data || []).filter(x => x.employee_id === emp.id).map(ind => ({
+          ...ind,
+          docCount: (d.data || []).filter(doc => doc.indoctrination_id === ind.id).length,
+          documents: [] // Load full documents only when viewing
+        }))
+      }));
       st.load = false;
       render();
     }
@@ -136,6 +144,23 @@
       await sb.from('documents').delete().eq('id', id);
       await loadData();
     }
+    // Load documents on-demand for a specific indoctrination
+    async function loadDocsForIndoc(indocId) {
+      const docs = await sb.from('documents').select('*').eq('indoctrination_id', indocId);
+      return docs.data || [];
+    }
+    // Open view docs modal and load documents
+    async function openViewDocs(empId, indocId) {
+      const emp = st.emps.find(e => e.id === empId);
+      if (!emp) return;
+      const ind = emp.indoctrinations.find(i => i.id === indocId);
+      if (!ind) return;
+      const t = INDOCS.find(x => x.id === ind.indoc_type_id);
+      ind.documents = await loadDocsForIndoc(ind.id);
+      st.modal = 'viewDocs';
+      st.data = { ind, type: t };
+      render();
+    }
     function getSt(ed) {
       const t = new Date(), e = new Date(ed), d = Math.floor((e - t) / 86400000);
       if (d < 0) return { s: 'expired', d };
@@ -166,7 +191,7 @@
     e.indoctrinations.forEach(i => {
       const s = getSt(i.expiry_date);
       const t = INDOCS.find(x => x.id === i.indoc_type_id);
-      const dc = i.documents ? i.documents.length : 0;
+      const dc = i.docCount || 0;
       const item = { emp: e.name, eid: e.employee_id, email: e.email, phone: e.phone, indoc: t?.name || 'Unknown', client: t?.client || '', exp: i.expiry_date, days: s.d, docs: dc > 0 ? 'Yes' : 'No' };
       if (s.d < 0) exp.push(item);
       else if (s.d <= 30) c30.push(item);
@@ -423,8 +448,8 @@ function toggleSelectAllEmps() {
      if (!t) return '<div class="p-2 rounded border border-gray-300 bg-gray-100"><div class="flex justify-between items-center"><div class="text-xs text-red-600">Invalid type</div><button onClick="delInd(\'' + ind.id + '\')" class="text-xs p-1 hover:bg-white rounded text-red-600">🗑️</button></div></div>';
       const s = getSt(ind.expiry_date);
       const cfg = { expired: { bg: 'bg-red-200', tx: 'text-red-900', br: 'border-red-500' }, critical: { bg: 'bg-orange-100', tx: 'text-orange-800', br: 'border-orange-300' }, warning: { bg: 'bg-yellow-100', tx: 'text-yellow-800', br: 'border-yellow-300' }, valid: { bg: 'bg-green-100', tx: 'text-green-800', br: 'border-green-300' } }[s.s];
-      const dc = ind.documents ? ind.documents.length : 0;
-      return `<div class="p-2 rounded border ${cfg.br} ${cfg.bg}"><div class="flex justify-between items-start mb-1"><div class="flex-1 min-w-0"><div class="text-xs font-semibold truncate" title="${t?.name || 'Unknown'}">${t?.name || 'Unknown'}</div><div class="text-[10px] text-gray-600">${t?.client || ''}</div></div><div class="flex gap-0.5 ml-1"><label class="cursor-pointer p-0.5 hover:bg-white rounded text-xs"><input type="file" multiple accept="image/*,.pdf" class="hidden" onChange="handleUp(event, '${ind.id}')"><span>📤</span></label>${dc > 0 ? `<button onClick="st.modal = 'viewDocs'; st.data = {ind: ${JSON.stringify(ind).replace(/"/g, '&quot;')}, type: ${JSON.stringify(t).replace(/"/g, '&quot;')}}; render();" class="p-0.5 hover:bg-white rounded text-xs">👁️</button>` : ''}<button onClick="editIndoc('${eid}', '${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">✏️</button><button onClick="delInd('${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">🗑️</button></div></div><div class="text-[10px] space-y-0.5"><div>Exp: ${new Date(ind.expiry_date).toLocaleDateString()}</div><div class="font-bold ${cfg.tx}">${s.d < 0 ? `EXPIRED ${Math.abs(s.d)}d ago` : `${s.d}d left`}</div><div class="mt-1">${dc > 0 ? `<span class="text-green-700 font-semibold">📄 ${dc}</span>` : '<span class="text-gray-500">No docs</span>'}</div></div></div>`;
+      const dc = ind.docCount || 0;
+      return `<div class="p-2 rounded border ${cfg.br} ${cfg.bg}"><div class="flex justify-between items-start mb-1"><div class="flex-1 min-w-0"><div class="text-xs font-semibold truncate" title="${t?.name || 'Unknown'}">${t?.name || 'Unknown'}</div><div class="text-[10px] text-gray-600">${t?.client || ''}</div></div><div class="flex gap-0.5 ml-1"><label class="cursor-pointer p-0.5 hover:bg-white rounded text-xs"><input type="file" multiple accept="image/*,.pdf" class="hidden" onChange="handleUp(event, '${ind.id}')"><span>📤</span></label>${dc > 0 ? `<button onClick="openViewDocs('${eid}', '${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">👁️</button>` : ''}<button onClick="editIndoc('${eid}', '${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">✏️</button><button onClick="delInd('${ind.id}')" class="p-0.5 hover:bg-white rounded text-xs">🗑️</button></div></div><div class="text-[10px] space-y-0.5"><div>Exp: ${new Date(ind.expiry_date).toLocaleDateString()}</div><div class="font-bold ${cfg.tx}">${s.d < 0 ? `EXPIRED ${Math.abs(s.d)}d ago` : `${s.d}d left`}</div><div class="mt-1">${dc > 0 ? `<span class="text-green-700 font-semibold">📄 ${dc}</span>` : '<span class="text-gray-500">No docs</span>'}</div></div></div>`;
     }
     function renderMod() {
       if (!st.modal) return '';
