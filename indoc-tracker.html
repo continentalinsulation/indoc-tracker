@@ -16,6 +16,7 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let expandedEmps = {};
     let indocSearch = '';
+    let selectedTid = '';
     let selectedEmpsForExport = {};
     let INDOCS = [
       { id: 'vale_t1_general', name: 'Tier 1: General Orientation', validityDays: 365, client: 'Vale' },
@@ -115,7 +116,7 @@
       if (!t) { alert('Invalid indoctrination type'); return; }
       const ex = new Date(cd);
       ex.setDate(ex.getDate() + t.validityDays);
-      const res = await sb.from('indoctrinations').insert([{ id: Date.now() + '_' + Math.random().toString(36).substr(2, 5), employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+      const res = await sb.from('indoctrinations').insert([{ id: Date.now() + '' + Math.floor(Math.random() * 10000), employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
       if (res.error) { alert('Error adding indoctrination: ' + res.error.message); return; }
       await loadData();
       st.modal = null;
@@ -447,7 +448,7 @@ function toggleSelectAllEmps() {
           t.name.toLowerCase().includes(indocSearch.toLowerCase()) ||
           t.client.toLowerCase().includes(indocSearch.toLowerCase())
         );
-        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] flex flex-col"><h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Add Indoctrination</h2><div class="space-y-3 sm:space-y-4 overflow-y-auto flex-1"><input id="indocSearchInput" type="text" placeholder="🔍 Search indoctrinations..." class="w-full p-3 border rounded text-base" value="${indocSearch}" onInput="indocSearch = this.value; cursorPos = this.selectionStart; render();" autofocus /><div class="text-xs text-gray-600 -mt-2 mb-1">Showing ${filteredIndocs.length} of ${INDOCS.length} indoctrinations</div><select id="tid" size="6" class="w-full p-2 border rounded text-sm" style="height: 150px;" onChange="document.getElementById('customIndoc').style.display = this.value === 'custom' ? 'block' : 'none';">${filteredIndocs.map(t => `<option value="${t.id}">${t.name} (${t.client})</option>`).join('')}<option value="custom">➕ Custom/Other Indoctrination</option></select><div id="customIndoc" style="display:none;" class="space-y-2"><input id="customName" placeholder="Indoctrination Name" class="w-full p-3 border rounded text-base" /><input id="customClient" placeholder="Client/Category" class="w-full p-3 border rounded text-base" /><input id="customDays" type="number" placeholder="Valid for (days)" class="w-full p-3 border rounded text-base" /></div><input id="cd" type="date" class="w-full p-3 border rounded text-base" /><input id="validDays" type="number" placeholder="Valid for (days) - optional" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; indocSearch = ''; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-3 bg-blue-600 text-white rounded text-base">Add</button></div></div></div></div>`;
+        return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] flex flex-col"><h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Add Indoctrination</h2><div class="space-y-3 sm:space-y-4 overflow-y-auto flex-1"><input id="indocSearchInput" type="text" placeholder="🔍 Search indoctrinations..." class="w-full p-3 border rounded text-base" value="${indocSearch}" onInput="indocSearch = this.value; cursorPos = this.selectionStart; render();" autofocus /><div class="text-xs text-gray-600 -mt-2 mb-1">Showing ${filteredIndocs.length} of ${INDOCS.length} indoctrinations</div><select id="tid" size="6" class="w-full p-2 border rounded text-sm" style="height: 150px;" onChange="selectedTid = this.value; document.getElementById('customIndoc').style.display = this.value === 'custom' ? 'block' : 'none';">${filteredIndocs.map(t => `<option value="${t.id}" ${t.id === selectedTid ? 'selected' : ''}>${t.name} (${t.client})</option>`).join('')}<option value="custom" ${selectedTid === 'custom' ? 'selected' : ''}>➕ Custom/Other Indoctrination</option></select><div id="customIndoc" style="display:${selectedTid === 'custom' ? 'block' : 'none'};" class="space-y-2"><input id="customName" placeholder="Indoctrination Name" class="w-full p-3 border rounded text-base" /><input id="customClient" placeholder="Client/Category" class="w-full p-3 border rounded text-base" /><input id="customDays" type="number" placeholder="Valid for (days)" class="w-full p-3 border rounded text-base" /></div><input id="cd" type="date" class="w-full p-3 border rounded text-base" /><input id="validDays" type="number" placeholder="Valid for (days) - optional" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; indocSearch = ''; selectedTid = ''; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddInd()" class="flex-1 py-3 bg-blue-600 text-white rounded text-base">Add</button></div></div></div></div>`;
       }
       if (st.modal === 'viewDocs') {
         const ind = st.data.ind;
@@ -511,9 +512,11 @@ return '';
       await addEmp(n, eid, em, ph);
     }
     async function handleAddInd() {
-  const tid = document.getElementById('tid').value;
+  try {
+  const tidEl = document.getElementById('tid');
+  const tid = tidEl ? tidEl.value : selectedTid;
   const cd = document.getElementById('cd').value;
-  if (!tid || !cd) { alert('All fields required'); return; }
+  if (!tid || !cd) { alert('Please select an indoctrination type AND enter a completion date'); return; }
   let insertTid = tid;
   let validDays;
   if (tid === 'custom') {
@@ -525,7 +528,6 @@ return '';
     insertTid = customIndoc.id;
     validDays = customIndoc.validityDays;
 
-    // Save custom indoc to database so all users can see it
     const cRes = await sb.from('custom_indoctrinations').insert([{
       id: customIndoc.id,
       name: customIndoc.name,
@@ -541,12 +543,14 @@ return '';
   }
   const ex = new Date(cd);
   ex.setDate(ex.getDate() + validDays);
-  const res = await sb.from('indoctrinations').insert([{ id: Date.now() + '_' + Math.random().toString(36).substr(2, 5), employee_id: st.data.eid, indoc_type_id: insertTid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+  const res = await sb.from('indoctrinations').insert([{ id: Date.now() + '' + Math.floor(Math.random() * 10000), employee_id: st.data.eid, indoc_type_id: insertTid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
   if (res.error) { alert('Error adding indoctrination: ' + res.error.message); return; }
   await loadData();
   st.modal = null;
   indocSearch = '';
+  selectedTid = '';
   render();
+  } catch(err) { alert('Error: ' + err.message); }
 }
     async function handleUp(e, iid) {
       const fs = e.target.files;
