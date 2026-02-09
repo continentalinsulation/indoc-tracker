@@ -112,9 +112,11 @@
     }
     async function addInd(eid, tid, cd) {
       const t = INDOCS.find(x => x.id === tid);
+      if (!t) { alert('Invalid indoctrination type'); return; }
       const ex = new Date(cd);
       ex.setDate(ex.getDate() + t.validityDays);
-      await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+      const res = await sb.from('indoctrinations').insert([{ id: Date.now() + '_' + Math.random().toString(36).substr(2, 5), employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+      if (res.error) { alert('Error adding indoctrination: ' + res.error.message); return; }
       await loadData();
       st.modal = null;
       render();
@@ -225,26 +227,12 @@
   const validDays = newValidDays ? parseInt(newValidDays) : t.validityDays;
   const ex = new Date(newCd);
   ex.setDate(ex.getDate() + validDays);
-  await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
+  const res = await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
+  if (res.error) { alert('Error updating indoctrination: ' + res.error.message); return; }
   await loadData();
   st.modal = null;
   render();
 }
-
-    async function handleEditIndoc() {
-  const newTid = document.getElementById('editTid').value;
-  const newCd = document.getElementById('editCd').value;
-  const newValidDays = document.getElementById('editValidDays').value;
-  if (!newTid || !newCd) { alert('All fields required'); return; }
-  const t = INDOCS.find(x => x.id === newTid);
-  const validDays = newValidDays ? parseInt(newValidDays) : t.validityDays;
-  const ex = new Date(newCd);
-  ex.setDate(ex.getDate() + validDays);
-  await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
-  await loadData();
-  st.modal = null;
-  render();
-}   // <-- This is line 178, the end of handleEditIndoc
 
 async function exportSingleEmployee(empId) {
   const emp = st.emps.find(e => e.id === empId);
@@ -526,36 +514,35 @@ return '';
   const tid = document.getElementById('tid').value;
   const cd = document.getElementById('cd').value;
   if (!tid || !cd) { alert('All fields required'); return; }
+  let insertTid = tid;
+  let validDays;
   if (tid === 'custom') {
     const cName = document.getElementById('customName').value;
     const cClient = document.getElementById('customClient').value;
     const cDays = document.getElementById('customDays').value;
     if (!cName || !cClient || !cDays) { alert('Fill in all custom fields'); return; }
     const customIndoc = { id: 'custom_' + Date.now(), name: cName, client: cClient, validityDays: parseInt(cDays) };
-    const ex = new Date(cd);
-    ex.setDate(ex.getDate() + customIndoc.validityDays);
+    insertTid = customIndoc.id;
+    validDays = customIndoc.validityDays;
 
     // Save custom indoc to database so all users can see it
-    await sb.from('custom_indoctrinations').insert([{
+    const cRes = await sb.from('custom_indoctrinations').insert([{
       id: customIndoc.id,
       name: customIndoc.name,
       client: customIndoc.client,
       validity_days: customIndoc.validityDays
     }]);
-
-    // Create the indoctrination record
-    await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: customIndoc.id, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+    if (cRes.error) { alert('Error saving custom type: ' + cRes.error.message); return; }
   } else {
-    const validDays = document.getElementById('validDays').value;
-if (validDays) {
-  const t = INDOCS.find(x => x.id === tid);
-  const ex = new Date(cd);
-  ex.setDate(ex.getDate() + parseInt(validDays));
-  await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
-} else {
-  await addInd(st.data.eid, tid, cd);
-}
+    const t = INDOCS.find(x => x.id === tid);
+    if (!t) { alert('Invalid indoctrination type selected'); return; }
+    const customDays = document.getElementById('validDays').value;
+    validDays = customDays ? parseInt(customDays) : t.validityDays;
   }
+  const ex = new Date(cd);
+  ex.setDate(ex.getDate() + validDays);
+  const res = await sb.from('indoctrinations').insert([{ id: Date.now() + '_' + Math.random().toString(36).substr(2, 5), employee_id: st.data.eid, indoc_type_id: insertTid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+  if (res.error) { alert('Error adding indoctrination: ' + res.error.message); return; }
   await loadData();
   st.modal = null;
   indocSearch = '';
