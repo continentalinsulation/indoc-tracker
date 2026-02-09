@@ -114,7 +114,24 @@
       const t = INDOCS.find(x => x.id === tid);
       const ex = new Date(cd);
       ex.setDate(ex.getDate() + t.validityDays);
-      await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+
+      // Generate unique ID with timestamp + random component to avoid collisions
+      const uniqueId = Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+
+      const result = await sb.from('indoctrinations').insert([{
+        id: uniqueId,
+        employee_id: eid,
+        indoc_type_id: tid,
+        completion_date: cd,
+        expiry_date: ex.toISOString().split('T')[0]
+      }]);
+
+      if (result.error) {
+        console.error('Error creating indoctrination:', result.error);
+        alert('Failed to add indoctrination: ' + result.error.message);
+        return;
+      }
+
       await loadData();
       st.modal = null;
       render();
@@ -526,35 +543,70 @@ return '';
   const tid = document.getElementById('tid').value;
   const cd = document.getElementById('cd').value;
   if (!tid || !cd) { alert('All fields required'); return; }
+
+  // Generate unique ID with timestamp + random component to avoid collisions
+  const uniqueId = Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+
   if (tid === 'custom') {
     const cName = document.getElementById('customName').value;
     const cClient = document.getElementById('customClient').value;
     const cDays = document.getElementById('customDays').value;
     if (!cName || !cClient || !cDays) { alert('Fill in all custom fields'); return; }
-    const customIndoc = { id: 'custom_' + Date.now(), name: cName, client: cClient, validityDays: parseInt(cDays) };
+    const customIndocId = 'custom_' + Date.now();
+    const customIndoc = { id: customIndocId, name: cName, client: cClient, validityDays: parseInt(cDays) };
     const ex = new Date(cd);
     ex.setDate(ex.getDate() + customIndoc.validityDays);
 
     // Save custom indoc to database so all users can see it
-    await sb.from('custom_indoctrinations').insert([{
+    const customResult = await sb.from('custom_indoctrinations').insert([{
       id: customIndoc.id,
       name: customIndoc.name,
       client: customIndoc.client,
       validity_days: customIndoc.validityDays
     }]);
 
+    if (customResult.error) {
+      console.error('Error creating custom indoctrination:', customResult.error);
+      alert('Failed to create custom indoctrination: ' + customResult.error.message);
+      return;
+    }
+
     // Create the indoctrination record
-    await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: customIndoc.id, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
+    const indocResult = await sb.from('indoctrinations').insert([{
+      id: uniqueId,
+      employee_id: st.data.eid,
+      indoc_type_id: customIndoc.id,
+      completion_date: cd,
+      expiry_date: ex.toISOString().split('T')[0]
+    }]);
+
+    if (indocResult.error) {
+      console.error('Error creating indoctrination:', indocResult.error);
+      alert('Failed to add indoctrination: ' + indocResult.error.message);
+      return;
+    }
   } else {
     const validDays = document.getElementById('validDays').value;
-if (validDays) {
-  const t = INDOCS.find(x => x.id === tid);
-  const ex = new Date(cd);
-  ex.setDate(ex.getDate() + parseInt(validDays));
-  await sb.from('indoctrinations').insert([{ id: Date.now() + '', employee_id: st.data.eid, indoc_type_id: tid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] }]);
-} else {
-  await addInd(st.data.eid, tid, cd);
-}
+    if (validDays) {
+      const t = INDOCS.find(x => x.id === tid);
+      const ex = new Date(cd);
+      ex.setDate(ex.getDate() + parseInt(validDays));
+      const result = await sb.from('indoctrinations').insert([{
+        id: uniqueId,
+        employee_id: st.data.eid,
+        indoc_type_id: tid,
+        completion_date: cd,
+        expiry_date: ex.toISOString().split('T')[0]
+      }]);
+
+      if (result.error) {
+        console.error('Error creating indoctrination:', result.error);
+        alert('Failed to add indoctrination: ' + result.error.message);
+        return;
+      }
+    } else {
+      await addInd(st.data.eid, tid, cd);
+    }
   }
   await loadData();
   st.modal = null;
