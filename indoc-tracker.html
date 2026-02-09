@@ -452,7 +452,7 @@ function toggleSelectAllEmps() {
               <div class="flex gap-2">
                 <button onClick="event.stopPropagation(); exportSingleEmployee('${e.id}')" class="flex-1 sm:flex-none px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs sm:text-sm whitespace-nowrap">📦</button>
                 <button onClick="event.stopPropagation(); st.modal = 'addInd'; st.data = {eid: '${e.id}'}; render();" class="flex-1 sm:flex-none px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs sm:text-sm whitespace-nowrap">+ Indoc</button>
-                <button onClick="event.stopPropagation(); st.modal = 'editEmp'; st.data = {emp: ${JSON.stringify(e).replace(/'/g, "&apos;")}}; render();" class="flex-1 sm:flex-none px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-xs sm:text-sm whitespace-nowrap">Edit</button>
+                <button onClick="event.stopPropagation(); st.modal = 'editEmp'; st.data = {empId: '${e.id}'}; render();" class="flex-1 sm:flex-none px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-xs sm:text-sm whitespace-nowrap">Edit</button>
                 <button onClick="event.stopPropagation(); delEmp('${e.id}')" class="flex-1 sm:flex-none px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-xs sm:text-sm">Delete</button>
               </div>
             </div>
@@ -473,7 +473,8 @@ function toggleSelectAllEmps() {
       if (!st.modal) return '';
       if (st.modal === 'addEmp') return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full"><h2 class="text-xl sm:text-2xl font-bold mb-4">Add Employee</h2><div class="space-y-3 sm:space-y-4"><input id="n" placeholder="Name" class="w-full p-3 border rounded text-base" /><input id="eid" placeholder="Employee ID" class="w-full p-3 border rounded text-base" /><input id="em" placeholder="Email" class="w-full p-3 border rounded text-base" /><input id="ph" placeholder="Phone" class="w-full p-3 border rounded text-base" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleAddEmp()" class="flex-1 py-3 bg-green-600 text-white rounded text-base">Add</button></div></div></div></div>`;
       if (st.modal === 'editEmp') {
-        const emp = st.data.emp;
+        const emp = st.emps.find(e => e.id === st.data.empId);
+        if (!emp) return '';
         return `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"><div class="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full"><h2 class="text-xl sm:text-2xl font-bold mb-4">Edit Employee</h2><div class="space-y-3 sm:space-y-4"><input id="editName" placeholder="Name" class="w-full p-3 border rounded text-base" value="${emp.name}" /><input id="editEid" placeholder="Employee ID" class="w-full p-3 border rounded text-base" value="${emp.employee_id}" /><input id="editEmail" placeholder="Email" class="w-full p-3 border rounded text-base" value="${emp.email || ''}" /><input id="editPhone" placeholder="Phone" class="w-full p-3 border rounded text-base" value="${emp.phone || ''}" /><div class="flex gap-2"><button onClick="st.modal = null; render();" class="flex-1 py-3 border rounded text-base">Cancel</button><button onClick="handleEditEmp()" class="flex-1 py-3 bg-green-600 text-white rounded text-base">Save</button></div></div></div></div>`;
       }
       if (st.modal === 'addInd') {
@@ -551,7 +552,7 @@ return '';
       const phone = document.getElementById('editPhone').value;
       if (!name || !employeeId || !email || !phone) { alert('All fields required'); return; }
 
-      const empId = st.data.emp.id;
+      const empId = st.data.empId;
       const result = await sb.from('employees').update({
         name: name,
         employee_id: employeeId,
