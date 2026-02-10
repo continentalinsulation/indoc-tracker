@@ -262,8 +262,9 @@
 }
 
 async function exportSingleEmployee(empId) {
-  const emp = st.emps.find(e => e.id === empId);
+  const emp = st.emps.find(e => e.id == empId);
   if (!emp) { alert('Employee not found'); return; }
+  if (!confirm('Export training records for ' + emp.name + '?')) return;
   if (!window.JSZip) { alert('Loading export library...'); return; }
 
   const zip = new JSZip();
