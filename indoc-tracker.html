@@ -100,9 +100,9 @@
 
       st.emps = (e.data || []).map(emp => ({
         ...emp,
-        indoctrinations: (i.data || []).filter(x => String(x.employee_id) === String(emp.id)).map(ind => ({
+        indoctrinations: (i.data || []).filter(x => x.employee_id == emp.id).map(ind => ({
           ...ind,
-          docCount: (d.data || []).filter(doc => String(doc.indoctrination_id) === String(ind.id)).length,
+          docCount: (d.data || []).filter(doc => doc.indoctrination_id == ind.id).length,
           documents: [] // Load full documents only when viewing
         }))
       }));
@@ -565,8 +565,6 @@ return '';
   indocSearch = '';
   selectedTid = '';
   render();
-  // Reload from DB in background for consistency
-  loadData();
   } catch(err) { alert('JS Error: ' + err.message + '\n\nStack: ' + err.stack); }
 }
     async function handleUp(e, iid) {
