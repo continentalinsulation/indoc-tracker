@@ -541,6 +541,7 @@ return '';
       validity_days: customIndoc.validityDays
     }]);
     if (cRes.error) { alert('Error saving custom type: ' + cRes.error.message); return; }
+    INDOCS.push(customIndoc);
   } else {
     const t = INDOCS.find(x => x.id === tid);
     if (!t) { alert('Invalid indoctrination type selected'); return; }
@@ -550,14 +551,22 @@ return '';
   const ex = new Date(cd);
   ex.setDate(ex.getDate() + validDays);
   const newId = Date.now() + '' + Math.floor(Math.random() * 10000);
-  const insertData = { id: newId, employee_id: st.data.eid, indoc_type_id: insertTid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] };
+  const insertData = { id: newId, employee_id: String(st.data.eid), indoc_type_id: insertTid, completion_date: cd, expiry_date: ex.toISOString().split('T')[0] };
   const res = await sb.from('indoctrinations').insert([insertData]);
   if (res.error) { alert('DB Error: ' + res.error.message + '\n\nCode: ' + res.error.code + '\nDetails: ' + res.error.details); return; }
-  await loadData();
+  // Optimistic update: add directly to in-memory data so UI updates immediately
+  const emp = st.emps.find(e => String(e.id) === String(st.data.eid));
+  if (emp) {
+    emp.indoctrinations.push({ ...insertData, docCount: 0, documents: [] });
+  }
+  // Ensure this employee is expanded so user sees the new indoc
+  expandedEmps[st.data.eid] = true;
   st.modal = null;
   indocSearch = '';
   selectedTid = '';
   render();
+  // Reload from DB in background for consistency
+  loadData();
   } catch(err) { alert('JS Error: ' + err.message + '\n\nStack: ' + err.stack); }
 }
     async function handleUp(e, iid) {
