@@ -151,18 +151,22 @@
     async function delEmp(id) {
       if (!confirm('Delete?')) return;
       await sb.from('employees').delete().eq('id', id);
-      await loadData();
+      st.emps = st.emps.filter(e => e.id != id);
+      render();
     }
     async function delInd(id) {
       await sb.from('indoctrinations').delete().eq('id', id);
-      await loadData();
+      st.emps.forEach(e => { e.indoctrinations = e.indoctrinations.filter(i => i.id != id); });
+      render();
     }
     async function upDoc(iid, f) {
       return new Promise(res => {
         const r = new FileReader();
         r.onload = async e => {
-          await sb.from('documents').insert([{ id: Date.now() + Math.random() + '', indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result }]);
-          await loadData();
+          const insertRes = await sb.from('documents').insert([{ id: Date.now() + Math.random() + '', indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result }]);
+          if (insertRes.error) { alert('Error uploading: ' + insertRes.error.message); res(); return; }
+          st.emps.forEach(emp => { emp.indoctrinations.forEach(ind => { if (ind.id == iid) { ind.docCount = (ind.docCount || 0) + 1; } }); });
+          render();
           res();
         };
         r.readAsDataURL(f);
@@ -171,7 +175,11 @@
     async function delDoc(id) {
       if (!confirm('Delete?')) return;
       await sb.from('documents').delete().eq('id', id);
-      await loadData();
+      if (st.data && st.data.ind) {
+        st.data.ind.documents = st.data.ind.documents.filter(d => d.id != id);
+        st.data.ind.docCount = Math.max(0, (st.data.ind.docCount || 1) - 1);
+      }
+      render();
     }
     // Load documents on-demand for a specific indoctrination
     async function loadDocsForIndoc(indocId) {
@@ -180,9 +188,9 @@
     }
     // Open view docs modal and load documents
     async function openViewDocs(empId, indocId) {
-      const emp = st.emps.find(e => e.id === empId);
+      const emp = st.emps.find(e => e.id == empId);
       if (!emp) return;
-      const ind = emp.indoctrinations.find(i => i.id === indocId);
+      const ind = emp.indoctrinations.find(i => i.id == indocId);
       if (!ind) return;
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
       ind.documents = await loadDocsForIndoc(ind.id);
@@ -239,8 +247,9 @@
   render();
 }
     function editIndoc(empId, indocId) {
-  const emp = st.emps.find(e => e.id === empId);
-  const indoc = emp.indoctrinations.find(i => i.id === indocId);
+  const emp = st.emps.find(e => e.id == empId);
+  if (!emp) return;
+  const indoc = emp.indoctrinations.find(i => i.id == indocId);
   st.modal = 'editIndoc';
   st.data = { empId, indocId, indoc };
   render();
@@ -254,9 +263,11 @@
   const validDays = newValidDays ? parseInt(newValidDays) : t.validityDays;
   const ex = new Date(newCd);
   ex.setDate(ex.getDate() + validDays);
-  const res = await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: ex.toISOString().split('T')[0] }).eq('id', st.data.indocId);
+  const newExpiry = ex.toISOString().split('T')[0];
+  const res = await sb.from('indoctrinations').update({ indoc_type_id: newTid, completion_date: newCd, expiry_date: newExpiry }).eq('id', st.data.indocId);
   if (res.error) { alert('Error updating indoctrination: ' + res.error.message); return; }
-  await loadData();
+  const indoc = st.data.indoc;
+  if (indoc) { indoc.indoc_type_id = newTid; indoc.completion_date = newCd; indoc.expiry_date = newExpiry; }
   st.modal = null;
   render();
 }
