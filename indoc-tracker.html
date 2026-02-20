@@ -163,9 +163,8 @@
       return new Promise(res => {
         const r = new FileReader();
         r.onload = async e => {
-          const docId = Date.now() + '_' + Math.floor(Math.random() * 10000);
-          const docData = { id: docId, indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result };
-          const insertRes = await sb.from('documents').insert([docData]);
+          const docId = Date.now() + '' + Math.floor(Math.random() * 10000);
+          const insertRes = await sb.from('documents').insert([{ id: docId, indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result }]);
           if (insertRes.error) { alert('Error uploading: ' + insertRes.error.message); res(); return; }
           st.emps.forEach(emp => { emp.indoctrinations.forEach(ind => {
             if (ind.id == iid) {
@@ -201,9 +200,8 @@
       const ind = emp.indoctrinations.find(i => i.id == indocId);
       if (!ind) return;
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-      if (!ind.documents || ind.documents.length === 0) {
-        ind.documents = await loadDocsForIndoc(ind.id);
-      }
+      const dbDocs = await loadDocsForIndoc(ind.id);
+      ind.documents = dbDocs.length > 0 ? dbDocs : (ind.documents || []);
       st.modal = 'viewDocs';
       st.data = { ind, type: t };
       render();
