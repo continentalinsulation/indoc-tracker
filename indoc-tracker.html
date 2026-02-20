@@ -163,9 +163,17 @@
       return new Promise(res => {
         const r = new FileReader();
         r.onload = async e => {
-          const insertRes = await sb.from('documents').insert([{ id: Date.now() + Math.random() + '', indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result }]);
+          const docId = Date.now() + '_' + Math.floor(Math.random() * 10000);
+          const docData = { id: docId, indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result };
+          const insertRes = await sb.from('documents').insert([docData]);
           if (insertRes.error) { alert('Error uploading: ' + insertRes.error.message); res(); return; }
-          st.emps.forEach(emp => { emp.indoctrinations.forEach(ind => { if (ind.id == iid) { ind.docCount = (ind.docCount || 0) + 1; } }); });
+          st.emps.forEach(emp => { emp.indoctrinations.forEach(ind => {
+            if (ind.id == iid) {
+              ind.docCount = (ind.docCount || 0) + 1;
+              if (!ind.documents) ind.documents = [];
+              ind.documents.push({ id: docId, indoctrination_id: iid, name: f.name, type: f.type, data: e.target.result, upload_date: new Date().toISOString() });
+            }
+          }); });
           render();
           res();
         };
@@ -193,7 +201,9 @@
       const ind = emp.indoctrinations.find(i => i.id == indocId);
       if (!ind) return;
       const t = INDOCS.find(x => x.id === ind.indoc_type_id);
-      ind.documents = await loadDocsForIndoc(ind.id);
+      if (!ind.documents || ind.documents.length === 0) {
+        ind.documents = await loadDocsForIndoc(ind.id);
+      }
       st.modal = 'viewDocs';
       st.data = { ind, type: t };
       render();
