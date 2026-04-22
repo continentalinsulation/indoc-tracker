@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Continental Insulation · Operations</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%231A1A1A'/%3E%3Ctext x='32' y='42' font-family='monospace' font-size='28' font-weight='700' fill='%23E85D2F' text-anchor='middle'%3ECI%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    html, body, #root { height: 100%; margin: 0; }
+    body { font-family: "IBM Plex Sans", system-ui, sans-serif; background: #F4F1EB; overscroll-behavior: none; }
+    *, *::before, *::after { box-sizing: border-box; }
+    input:focus, textarea:focus, select:focus { border-color: #1A1A1A !important; }
+    button:focus { outline: 2px solid #E85D2F; outline-offset: 1px; }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="src/data-layer.js"></script>
+  <script type="text/babel" data-presets="env,react" src="src/ui-base.jsx"></script>
+  <script type="text/babel" data-presets="env,react" src="src/job-row-and-modals.jsx"></script>
+  <script type="text/babel" data-presets="env,react" src="src/daily-log.jsx"></script>
+  <script type="text/babel" data-presets="env,react">
+    function App() {
+      const [session, setSession] = React.useState(undefined); // undefined=loading
+      const [ready, setReady] = React.useState(false);
+      const [date, setDate] = React.useState(() => {
+        const saved = localStorage.getItem('ci.date');
+        return saved ? window.parseYmd(saved) : new Date();
+      });
+      const [historyOpen, setHistoryOpen] = React.useState(false);
+
+      // Auth bootstrap
+      React.useEffect(() => {
+        window.getSession().then(s => setSession(s));
+        const { data: sub } = window.onAuthChange(s => setSession(s));
+        return () => sub.subscription.unsubscribe();
+      }, []);
+
+      // Load lookups after sign-in
+      React.useEffect(() => {
+        if (session) {
+          setReady(false);
+          window.loadLookups().then(() => setReady(true)).catch(e => { alert('Failed to load: ' + e.message); });
+        } else {
+          setReady(false);
+        }
+      }, [session?.user?.id]);
+
+      // Persist date
+      React.useEffect(() => { localStorage.setItem('ci.date', window.ymd(date)); }, [date]);
+
+      // Keyboard shortcuts
+      React.useEffect(() => {
+        if (!session) return;
+        const onKey = (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+          if (e.key === 'ArrowLeft') setDate(d => window.addDays(d, -1));
+          else if (e.key === 'ArrowRight') setDate(d => window.addDays(d, 1));
+          else if (e.key === 't' || e.key === 'T') setDate(new Date());
+          else if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setHistoryOpen(true); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [session]);
+
+      if (session === undefined) {
+        return <div style={{position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#6B6252', fontSize:12}}>Loading…</div>;
+      }
+      if (!session) {
+        return <window.LoginScreen onSignedIn={() => { /* onAuthChange handles it */ }}/>;
+      }
+      if (!ready) {
+        return <div style={{position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center', color:'#6B6252', fontSize:12}}>Loading crew and jobs…</div>;
+      }
+
+      return (
+        <>
+          <window.DailyLog
+            date={date}
+            onChangeDate={setDate}
+            onOpenHistory={() => setHistoryOpen(true)}
+            onSignOut={async () => { await window.signOut(); }}
+            userEmail={session.user.email}
+          />
+          <window.HistoryDrawer
+            open={historyOpen}
+            onClose={() => setHistoryOpen(false)}
+            onPick={setDate}
+            currentDate={window.ymd(date)}
+          />
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

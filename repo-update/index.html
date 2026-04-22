@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental Insulation - Management Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div class="min-h-screen p-4 sm:p-6 lg:p-8">
+    <!-- Header -->
+    <div class="max-w-7xl mx-auto mb-8 sm:mb-12">
+      <div class="bg-white rounded-lg shadow-md p-6 sm:p-8 text-center">
+        <h1 class="text-3xl sm:text-5xl font-bold text-gray-800 mb-3">Continental Insulation</h1>
+        <p class="text-xl sm:text-2xl text-gray-600 mb-2">Management Dashboard</p>
+        <p class="text-sm sm:text-base text-gray-500">Select a system to get started</p>
+      </div>
+    </div>
+
+    <!-- System Cards -->
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+
+        <!-- Indoctrination Tracker Card -->
+        <a href="indoc-tracker.html" class="block group">
+          <div class="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden h-full">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-6 sm:p-8">
+              <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl">👷</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white text-center">Indoctrination Tracker</h2>
+            </div>
+
+            <div class="p-6 sm:p-8">
+              <p class="text-gray-600 mb-6 text-base sm:text-lg leading-relaxed">
+                Track employee safety indoctrinations, training certifications, and compliance status.
+                Monitor expiry dates and maintain up-to-date training records.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">51 Vale indoctrination types</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Real-time expiry tracking</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Document management</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Export & reporting tools</span>
+                </div>
+              </div>
+
+              <div class="mt-8">
+                <div class="bg-blue-50 text-blue-700 px-4 py-3 rounded-lg text-center font-semibold group-hover:bg-blue-100 transition-colors">
+                  Open Indoc Tracker →
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+
+        <!-- Estimate Tracker Card -->
+        <a href="estimate-tracker.html" class="block group">
+          <div class="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden h-full">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 p-6 sm:p-8">
+              <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl">📋</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white text-center">Estimate Tracker</h2>
+            </div>
+
+            <div class="p-6 sm:p-8">
+              <p class="text-gray-600 mb-6 text-base sm:text-lg leading-relaxed">
+                Manage quotes and estimates for firm price contract jobs. Track status,
+                deadlines, and collaborate with your estimating team.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Multi-user collaboration</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Password protected access</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Document uploads & storage</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Status & deadline tracking</span>
+                </div>
+              </div>
+
+              <div class="mt-8">
+                <div class="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-center font-semibold group-hover:bg-green-100 transition-colors">
+                  Open Estimate Tracker →
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+
+        <!-- Operations Card -->
+        <a href="daily-log.html" class="block group">
+          <div class="bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden h-full">
+            <div class="bg-gradient-to-r from-orange-600 to-orange-700 p-6 sm:p-8">
+              <div class="flex items-center justify-center mb-4">
+                <span class="text-6xl">🔧</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white text-center">Operations</h2>
+            </div>
+
+            <div class="p-6 sm:p-8">
+              <p class="text-gray-600 mb-6 text-base sm:text-lg leading-relaxed">
+                Daily operations log and planner. Track crew on site, job progress, hours,
+                meetings, and to-dos across Smelter, Nickel Refinery, and all other facilities.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Daily crew attendance & hours</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Job status, % complete & photos</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Meetings, site visits, to-dos</span>
+                </div>
+                <div class="flex items-start">
+                  <span class="text-green-500 mr-2">✓</span>
+                  <span class="text-gray-700 text-sm sm:text-base">Full historical log & search</span>
+                </div>
+              </div>
+
+              <div class="mt-8">
+                <div class="bg-orange-50 text-orange-700 px-4 py-3 rounded-lg text-center font-semibold group-hover:bg-orange-100 transition-colors">
+                  Open Operations →
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- Footer Info -->
+    <div class="max-w-7xl mx-auto mt-12">
+      <div class="bg-white rounded-lg shadow-md p-6 text-center">
+        <p class="text-sm text-gray-600">
+          ☁️ Cloud-based • Real-time updates • Secure access
+        </p>
+        <p class="text-xs text-gray-500 mt-2">
+          All systems use Supabase for secure, reliable data storage
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
